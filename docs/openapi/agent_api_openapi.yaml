@@ -1,0 +1,283 @@
+openapi: 3.0.3
+info:
+  title: Dynamic Football Agent API
+  version: 1.0.0
+  description: |
+    HTTP wrapper around the dynamic helper pipeline.
+
+    Source implementation:
+    - scripts/web/agent_api_server.py
+
+    Note on authentication:
+    - Bearer auth is required only when AGENT_API_TOKEN is configured on the server.
+servers:
+  - url: http://127.0.0.1:8081
+    description: Local default
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns service status and current UTC time.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Healthy service response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                default:
+                  value:
+                    ok: true
+                    service: agent_api_server
+                    time_utc: '2026-04-25T12:34:56+00:00'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    ok: false
+                    error: not_found
+
+  /v1/question:
+    post:
+      summary: Ask a natural-language football question
+      description: |
+        Runs optional freshness sync and then answers the question via dynamic helpers.
+
+        Auth behavior:
+        - If server AGENT_API_TOKEN is configured, send Authorization: Bearer <token>.
+        - If not configured, this endpoint allows anonymous access.
+      operationId: postQuestion
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionRequest'
+            examples:
+              default:
+                value:
+                  question: Who scored the most goals in Serie A in 2025?
+              localOnly:
+                value:
+                  question: Show Juventus goal trend in the last 10 years
+                  local_only: true
+                  no_cache: false
+                  freshness_days_back: 3
+                  cache_ttl_seconds: 3600
+      responses:
+        '200':
+          description: Successful answer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionSuccessResponse'
+              examples:
+                default:
+                  value:
+                    ok: true
+                    freshness:
+                      mode: api_check
+                      performed: true
+                      league_code: SA
+                      from_date: '2026-04-22'
+                      to_date: '2026-04-25'
+                    answer:
+                      intent: team_goal_trend
+                      data:
+                        team: Juventus
+                        years: [2016, 2017, 2018]
+                        goals: [78, 86, 70]
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingQuestion:
+                  value:
+                    ok: false
+                    error: question_is_required
+        '401':
+          description: Unauthorized (token required or invalid)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    ok: false
+                    error: unauthorized
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    ok: false
+                    error: not_found
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              description: Seconds until the current rate-limit window resets.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitResponse'
+              examples:
+                rateLimited:
+                  value:
+                    ok: false
+                    error: rate_limited
+                    retry_after_seconds: 17
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                internalError:
+                  value:
+                    ok: false
+                    error: internal_error
+                    detail: unexpected error message
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API token
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - ok
+        - service
+        - time_utc
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        service:
+          type: string
+          enum: [agent_api_server]
+        time_utc:
+          type: string
+          description: UTC ISO-8601 timestamp generated by the server.
+
+    QuestionRequest:
+      type: object
+      required:
+        - question
+      properties:
+        question:
+          type: string
+          minLength: 1
+          description: Natural-language user question.
+        local_only:
+          type: boolean
+          default: false
+          description: Skip API freshness sync and answer from local data only.
+        freshness_days_back:
+          type: integer
+          default: 3
+          minimum: 1
+          description: Number of days for optional freshness sync lookback.
+        no_cache:
+          type: boolean
+          default: false
+          description: If true, bypass helper cache for this request.
+        cache_ttl_seconds:
+          type: integer
+          nullable: true
+          description: Optional cache TTL override in seconds.
+      additionalProperties: false
+
+    FreshnessResult:
+      type: object
+      required:
+        - mode
+        - performed
+      properties:
+        mode:
+          type: string
+          enum: [local_only, api_check]
+        performed:
+          type: boolean
+        reason:
+          type: string
+          description: Present when freshness sync was intentionally skipped.
+        league_code:
+          type: string
+          description: Present when freshness sync was performed.
+        from_date:
+          type: string
+          format: date
+          description: Present when freshness sync was performed.
+        to_date:
+          type: string
+          format: date
+          description: Present when freshness sync was performed.
+      additionalProperties: false
+
+    QuestionSuccessResponse:
+      type: object
+      required:
+        - ok
+        - freshness
+        - answer
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        freshness:
+          $ref: '#/components/schemas/FreshnessResult'
+        answer:
+          description: Raw output from answer_question_with_helpers.
+      additionalProperties: false
+
+    ErrorResponse:
+      type: object
+      required:
+        - ok
+        - error
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: string
+        detail:
+          type: string
+      additionalProperties: true
+
+    RateLimitResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          required:
+            - retry_after_seconds
+          properties:
+            retry_after_seconds:
+              type: integer
+              minimum: 1

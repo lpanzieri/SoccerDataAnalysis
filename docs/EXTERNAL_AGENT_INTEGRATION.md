@@ -12,6 +12,12 @@ Use the existing data and helper scripts through a stable HTTP API so a website 
 File:
 - [scripts/web/agent_api_server.py](../scripts/web/agent_api_server.py)
 
+Formal API spec:
+- [docs/openapi/agent_api_openapi.yaml](openapi/agent_api_openapi.yaml)
+
+Contract maintenance rule:
+- Any behavior change in `scripts/web/agent_api_server.py` must update `docs/openapi/agent_api_openapi.yaml` in the same commit/PR.
+
 Endpoints:
 - GET /health
 - POST /v1/question

@@ -8,6 +8,9 @@ This document provides a step-by-step workflow and best practices to efficiently
 - **Always update this file after every behavior-changing code/config change.**
   - If you touch intent routing, helper output format, cache behavior, schema assumptions, CLI usage, or API bridge behavior, reflect it here in the same PR/change.
   - Do not defer docs updates. `WORKFLOW.md` is part of the implementation, not optional commentary.
+- **API bridge contract rule (mandatory): keep OpenAPI spec in lockstep with server behavior.**
+  - If you modify `scripts/web/agent_api_server.py` request/response shape, endpoint paths, auth, headers, status codes, or rate-limit semantics, update `docs/openapi/agent_api_openapi.yaml` in the same PR/change.
+  - Validation command: `grep -n "def do_GET\|def do_POST\|/health\|/v1/question" scripts/web/agent_api_server.py && test -f docs/openapi/agent_api_openapi.yaml`
 - **Update both what changed and how to validate it.**
   - Add one short bullet under the relevant section and one validation command/example.
 - **Keep canonical operational docs and filenames stable.**
