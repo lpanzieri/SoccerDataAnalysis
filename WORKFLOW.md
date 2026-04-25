@@ -52,6 +52,10 @@ This document provides a step-by-step workflow and best practices to efficiently
   - Keep detailed payload in `meta` (`image_path`, labels, series, badge resolution info).
 - **Do not rely on list-only cache payloads for graphical responses.**
   - Handle both dict and list cache shapes defensively.
+- **Render graphical outputs once and reuse the same bytes for every output target.**
+  - Save the figure to in-memory PNG bytes once.
+  - Write those same bytes to `image_path` and use the same bytes for `base64_image`.
+  - Avoid multiple `savefig` passes for the same figure unless output formats truly differ.
 
 ## 2.2 Badge/Data Source Compatibility
 

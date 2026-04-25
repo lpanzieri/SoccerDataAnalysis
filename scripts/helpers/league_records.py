@@ -198,13 +198,12 @@ def plot_goals_comparison(
 
     filename = f"goals_comparison_{'_'.join([n.lower() for n in team_names])}_{start_year}_{this_year}.png"
     image_path = os.path.join(image_dir, filename)
-    plt.savefig(image_path)
-
     buf = BytesIO()
-    plt.savefig(buf, format="png")
-    buf.seek(0)
-    base64_image = base64.b64encode(buf.read()).decode("utf-8")
-    plt.close()
+    fig.savefig(buf, format="png")
+    image_bytes = buf.getvalue()
+    Path(image_path).write_bytes(image_bytes)
+    base64_image = base64.b64encode(image_bytes).decode("utf-8")
+    plt.close(fig)
     return {
       "image_path": image_path,
       "base64_image": base64_image,

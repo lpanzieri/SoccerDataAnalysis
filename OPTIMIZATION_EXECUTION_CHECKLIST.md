@@ -36,6 +36,32 @@ Initial interpretation:
 - This aligns with known hot-path overhead in `dynamic_helper_manager.py` (per-request cache ensure/prune/freshness checks and potential inline refresh logic).
 - Priority remains Tasks 7, 8, 9 to make caching beneficial.
 
+## Execution Log
+
+### Task 4 - Single render image pipeline
+
+- Branch: `opt/task-4-single-render`
+- Status: complete
+- Report file: `benchmarks/helper_benchmark_20260425_170050.json`
+- Validation mode: cache disabled, 10 runs, 2 warmups, DB user `root`
+- Result:
+  - `p50`: 195.36 ms
+  - `p95`: 199.90 ms
+  - avg DB execute calls/run: 44
+- Delta vs prior cache-off baseline:
+  - `p50`: 362.36 ms -> 195.36 ms
+  - `p95`: 365.54 ms -> 199.90 ms
+  - avg DB execute calls/run: unchanged at 44
+- Regression checks passed:
+  - `intent == graphical_goals_comparison`
+  - `image == True`
+  - `base64_image == True`
+  - `meta.image_path` present
+  - `meta.team_badges` populated for Inter, Milan, Juventus, Napoli
+- Notes:
+  - The chart is now rendered once to in-memory PNG bytes.
+  - The same bytes are written to disk and base64-encoded, avoiding a second Matplotlib save pass.
+
 ## Week Plan
 
 ### Day 1 - Baseline + Quick Wins (Helpers)
@@ -68,6 +94,7 @@ Initial interpretation:
   - `image_path` exists
   - `base64_image` present and decodable
   - visual output unchanged (including badges)
+ - Status: Done on `opt/task-4-single-render`
 
 5. Profile and optimize badge decode path for blob-backed badges (minimal decode overhead).
 - Target file: `scripts/helpers/league_records.py`
@@ -148,8 +175,8 @@ Initial interpretation:
 - If p95 worsens or output contract breaks, revert that task only.
 
 ## Tracking Template
-- [ ] Task ID
-- [ ] Code complete
-- [ ] Benchmark delta recorded
-- [ ] Regression checks passed
-- [ ] Docs updated
+- [x] Task 4
+- [x] Code complete
+- [x] Benchmark delta recorded
+- [x] Regression checks passed
+- [x] Docs updated
