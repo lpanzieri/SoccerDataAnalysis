@@ -71,6 +71,7 @@ paths:
                 value:
                   question: Show Juventus goal trend in the last 10 years
                   local_only: true
+                  compute_backend: auto
                   no_cache: false
                   freshness_days_back: 3
                   cache_ttl_seconds: 3600
@@ -91,6 +92,7 @@ paths:
                       league_code: SA
                       from_date: '2026-04-22'
                       to_date: '2026-04-25'
+                    compute_backend: auto
                     answer:
                       intent: team_goal_trend
                       data:
@@ -207,6 +209,11 @@ components:
           type: boolean
           default: false
           description: If true, bypass helper cache for this request.
+        compute_backend:
+          type: string
+          enum: [auto, cpu, cuda]
+          default: auto
+          description: Preferred compute backend for helper execution.
         cache_ttl_seconds:
           type: integer
           nullable: true
@@ -245,6 +252,7 @@ components:
       required:
         - ok
         - freshness
+        - compute_backend
         - answer
       properties:
         ok:
@@ -252,6 +260,9 @@ components:
           enum: [true]
         freshness:
           $ref: '#/components/schemas/FreshnessResult'
+        compute_backend:
+          type: string
+          enum: [auto, cpu, cuda]
         answer:
           description: Raw output from answer_question_with_helpers.
       additionalProperties: false

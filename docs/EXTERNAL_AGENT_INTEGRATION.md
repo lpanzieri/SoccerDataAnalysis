@@ -42,6 +42,7 @@ POST /v1/question JSON body:
 - local_only: boolean (optional, default false)
 - freshness_days_back: integer (optional, default 3)
 - no_cache: boolean (optional, default false)
+- compute_backend: string (optional, one of `auto|cpu|cuda`, default server setting)
 - cache_ttl_seconds: integer or null (optional)
 
 Required header when `AGENT_API_TOKEN` is set:
@@ -50,11 +51,14 @@ Required header when `AGENT_API_TOKEN` is set:
 Default behavior:
 - If local_only is false, the API wrapper attempts a small freshness sync against API data before answering.
 - If local_only is true, it skips API sync and answers from local data only.
+- If compute_backend is omitted, the server default is used (`AGENT_API_COMPUTE_BACKEND`, fallback `COMPUTE_BACKEND`, default `auto`).
+- Backend selection remains optional and safe: unsupported CUDA paths must fallback to CPU.
 
 ## Response contract
 Success response shape:
 - ok: true
 - freshness: object describing whether API freshness sync was performed
+- compute_backend: effective backend preference applied for this request
 - answer: original output from answer_question_with_helpers
 
 Error response shape:

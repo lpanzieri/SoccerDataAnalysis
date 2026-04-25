@@ -78,6 +78,7 @@ import json
 import os
 import re
 import time
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
@@ -691,6 +692,32 @@ def ensure_helper_for_question(question: str) -> HelperResolution:
 
     if entry:
         helper_file = Path(entry["helper_file"])
+        if not helper_file.is_file():
+            # Recover from stale registry entries that reference deleted helper files.
+            helper_file = GENERATED_DIR / _generated_filename(intent, league_code, helper_kwargs)
+            helper_file.write_text(
+                _render_helper_file(
+                    intent=intent,
+                    template=template,
+                    league_code=league_code,
+                    helper_kwargs=helper_kwargs,
+                    question=question,
+                ),
+                encoding="utf-8",
+            )
+            entry["helper_file"] = str(helper_file)
+            entry["source_question_example"] = question
+            entry["template_present"] = template is not None
+            entry["helper_kwargs"] = helper_kwargs
+            registry[key] = entry
+            _save_registry(registry)
+            return HelperResolution(
+                helper_key=key,
+                intent=intent,
+                league_code=league_code,
+                helper_file=helper_file,
+                created=True,
+            )
         return HelperResolution(
             helper_key=key,
             intent=intent,
@@ -763,11 +790,29 @@ def _to_json_safe(value: Any) -> Any:
     return str(value)
 
 
+@contextmanager
+def _temporary_compute_backend(compute_backend: Optional[str]):
+    if not compute_backend:
+        yield
+        return
+
+    previous = os.environ.get("COMPUTE_BACKEND")
+    os.environ["COMPUTE_BACKEND"] = str(compute_backend).strip().lower()
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop("COMPUTE_BACKEND", None)
+        else:
+            os.environ["COMPUTE_BACKEND"] = previous
+
+
 def answer_question_with_helpers(
     question: str,
     db: DBConfig,
     use_cache: Optional[bool] = None,
     cache_ttl_seconds: Optional[int] = None,
+    compute_backend: Optional[str] = None,
 ) -> Dict[str, Any]:
     if use_cache is None:
         use_cache = _env_bool("HELPER_RESPONSE_CACHE_ENABLED", True)
@@ -796,31 +841,51 @@ def answer_question_with_helpers(
                 cur = conn.cursor()
                 try:
                     candidates = []
+
+                    def _append_candidate_from_query(sql: str, params: tuple = ()) -> None:
+                        """Best-effort MAX(date) lookup across schema variants."""
+                        try:
+                            cur.execute(sql, params)
+                            row = cur.fetchone()
+                        except Exception:
+                            return
+                        if not row or not row[0]:
+                            return
+                        value = row[0]
+                        candidates.append(value.strftime("%Y-%m-%d") if hasattr(value, "strftime") else str(value)[:10])
+
                     # Legacy match_game table
                     if league_code:
-                        cur.execute(
+                        _append_candidate_from_query(
                             "SELECT MAX(match_date) FROM match_game m JOIN league l ON l.league_id = m.league_id WHERE l.league_code = %s",
                             (league_code,)
                         )
+                        _append_candidate_from_query(
+                            "SELECT MAX(date) FROM match_game m JOIN league l ON l.league_id = m.league_id WHERE l.league_code = %s",
+                            (league_code,)
+                        )
                     else:
-                        cur.execute("SELECT MAX(match_date) FROM match_game")
-                    row = cur.fetchone()
-                    if row and row[0]:
-                        candidates.append(row[0].strftime("%Y-%m-%d"))
+                        _append_candidate_from_query("SELECT MAX(match_date) FROM match_game")
+                        _append_candidate_from_query("SELECT MAX(date) FROM match_game")
+
                     # event_fixture table (API-Football pipeline)
                     provider_id = LEAGUE_CODE_TO_PROVIDER_ID.get(league_code) if league_code else None
                     if provider_id:
-                        cur.execute(
+                        _append_candidate_from_query(
                             "SELECT MAX(match_date) FROM event_fixture WHERE league_id = %s AND status_short IN ('FT','AET','PEN','FT_PEN','AWD','WO')",
                             (provider_id,)
                         )
+                        _append_candidate_from_query(
+                            "SELECT MAX(date) FROM event_fixture WHERE league_id = %s AND status_short IN ('FT','AET','PEN','FT_PEN','AWD','WO')",
+                            (provider_id,)
+                        )
                     else:
-                        cur.execute(
+                        _append_candidate_from_query(
                             "SELECT MAX(match_date) FROM event_fixture WHERE status_short IN ('FT','AET','PEN','FT_PEN','AWD','WO')"
                         )
-                    row = cur.fetchone()
-                    if row and row[0]:
-                        candidates.append(row[0].strftime("%Y-%m-%d") if hasattr(row[0], "strftime") else str(row[0])[:10])
+                        _append_candidate_from_query(
+                            "SELECT MAX(date) FROM event_fixture WHERE status_short IN ('FT','AET','PEN','FT_PEN','AWD','WO')"
+                        )
                     return max(candidates) if candidates else None
                 finally:
                     cur.close()
@@ -921,7 +986,8 @@ def answer_question_with_helpers(
             }
 
     answer_fn = _load_answer_callable(resolved.helper_file)
-    rows = _to_json_safe(answer_fn(db))
+    with _temporary_compute_backend(compute_backend):
+        rows = _to_json_safe(answer_fn(db))
 
     if use_cache:
         _set_cached_rows(
@@ -938,6 +1004,7 @@ def answer_question_with_helpers(
             "helper_key": resolved.helper_key,
             "intent": resolved.intent,
             "league_code": resolved.league_code,
+            "compute_backend": (compute_backend or os.getenv("COMPUTE_BACKEND", "auto")).lower(),
             "helper_file": str(resolved.helper_file),
             "created": resolved.created,
             "cache": {
@@ -955,6 +1022,7 @@ def answer_question_with_helpers(
         "helper_key": resolved.helper_key,
         "intent": resolved.intent,
         "league_code": resolved.league_code,
+        "compute_backend": (compute_backend or os.getenv("COMPUTE_BACKEND", "auto")).lower(),
         "helper_file": str(resolved.helper_file),
         "created": resolved.created,
         "cache": {

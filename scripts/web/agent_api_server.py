@@ -33,6 +33,7 @@ class AgentApiHandler(BaseHTTPRequestHandler):
     allowed_origin: str
     required_token: str
     rate_limit_rpm: int
+    default_compute_backend: str
     _rate_limit_lock = threading.Lock()
     _rate_limit_state: Dict[str, Tuple[float, int]] = {}
 
@@ -196,6 +197,23 @@ class AgentApiHandler(BaseHTTPRequestHandler):
             no_cache = bool(payload.get("no_cache", False))
             cache_ttl_seconds_raw: Optional[Any] = payload.get("cache_ttl_seconds")
             freshness_days_back = int(payload.get("freshness_days_back", 3))
+            request_compute_backend_raw = payload.get("compute_backend")
+
+            if request_compute_backend_raw is None:
+                effective_compute_backend = self.default_compute_backend
+            else:
+                effective_compute_backend = str(request_compute_backend_raw).strip().lower()
+
+            if effective_compute_backend not in {"auto", "cpu", "cuda"}:
+                self._send_json(
+                    400,
+                    {
+                        "ok": False,
+                        "error": "invalid_compute_backend",
+                        "detail": "compute_backend must be one of: auto, cpu, cuda",
+                    },
+                )
+                return
 
             cache_ttl_seconds: Optional[int]
             if cache_ttl_seconds_raw is None:
@@ -214,6 +232,7 @@ class AgentApiHandler(BaseHTTPRequestHandler):
                 db=self.db,
                 use_cache=(False if no_cache else None),
                 cache_ttl_seconds=cache_ttl_seconds,
+                compute_backend=effective_compute_backend,
             )
 
             self._send_json(
@@ -221,6 +240,7 @@ class AgentApiHandler(BaseHTTPRequestHandler):
                 {
                     "ok": True,
                     "freshness": freshness,
+                    "compute_backend": effective_compute_backend,
                     "answer": answer,
                 },
             )
@@ -242,6 +262,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--allowed-origin", default=os.getenv("AGENT_API_ALLOWED_ORIGIN", "*"))
     p.add_argument("--api-token-env", default="AGENT_API_TOKEN")
     p.add_argument("--rate-limit-rpm", type=int, default=int(os.getenv("AGENT_API_RATE_LIMIT_RPM", "60")))
+    p.add_argument(
+        "--compute-backend",
+        choices=("auto", "cpu", "cuda"),
+        default=os.getenv("AGENT_API_COMPUTE_BACKEND", os.getenv("COMPUTE_BACKEND", "auto")),
+        help="Default compute backend forwarded to helper execution when request does not provide compute_backend.",
+    )
 
     p.add_argument("--host", default=os.getenv("MYSQL_HOST", "127.0.0.1"))
     p.add_argument("--db-port", type=int, default=int(os.getenv("MYSQL_PORT", "3306")))
@@ -265,6 +291,7 @@ def main() -> None:
     AgentApiHandler.allowed_origin = args.allowed_origin
     AgentApiHandler.required_token = os.getenv(args.api_token_env, "")
     AgentApiHandler.rate_limit_rpm = args.rate_limit_rpm
+    AgentApiHandler.default_compute_backend = args.compute_backend
 
     server = ThreadingHTTPServer((args.bind, args.port), AgentApiHandler)
     print(f"Serving agent API on http://{args.bind}:{args.port}")
