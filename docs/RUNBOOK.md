@@ -58,6 +58,22 @@ crontab scripts/maintenance/data_analysis_auto.cron
 crontab -l
 ```
 
+## 4.1) Optional CUDA Runtime (Phase 1)
+CUDA support is optional and CPU remains the default execution mode.
+
+Current phase behavior:
+- runtime capability detection is enabled for analysis scripts
+- execution remains CPU-only by design in Phase 1
+
+Supported controls:
+- `ENABLE_CUDA=0|1` (default `1`)
+- `COMPUTE_BACKEND=auto|cpu|cuda` (default `auto`)
+- per-script override: `--compute-backend auto|cpu|cuda`
+
+Notes:
+- `--compute-backend cuda` validates CUDA runtime availability; execution still falls back to CPU in Phase 1.
+- missing CUDA libraries/devices never break default `auto` mode.
+
 ## 5) Key Reliability Features
 - Idempotent upserts in sync/linking path.
 - Queue state persisted in DB.

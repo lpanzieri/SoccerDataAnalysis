@@ -11,6 +11,10 @@ This document provides a step-by-step workflow and best practices to efficiently
 - **API bridge contract rule (mandatory): keep OpenAPI spec in lockstep with server behavior.**
   - If you modify `scripts/web/agent_api_server.py` request/response shape, endpoint paths, auth, headers, status codes, or rate-limit semantics, update `docs/openapi/agent_api_openapi.yaml` in the same PR/change.
   - Validation command: `grep -n "def do_GET\|def do_POST\|/health\|/v1/question" scripts/web/agent_api_server.py && test -f docs/openapi/agent_api_openapi.yaml`
+- **Optional CUDA rule (mandatory): preserve CPU-first behavior and safe fallback.**
+  - CUDA acceleration must remain optional; default behavior must work without CUDA packages or GPU hardware.
+  - Runtime backend selection must support `auto|cpu|cuda`; `auto` must never fail due to missing CUDA dependencies.
+  - Validation command: `python - <<'PY'\nfrom scripts.helpers.cuda_runtime import resolve_compute_backend\nprint(resolve_compute_backend('auto', allow_cuda_execution=False))\nprint(resolve_compute_backend('cpu', allow_cuda_execution=False))\nPY`
 - **Update both what changed and how to validate it.**
   - Add one short bullet under the relevant section and one validation command/example.
 - **Keep canonical operational docs and filenames stable.**

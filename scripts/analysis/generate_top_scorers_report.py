@@ -28,6 +28,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.helpers.api_football_guard import ApiGuard, api_get_json
+from scripts.helpers.cuda_runtime import resolve_compute_backend
 
 EXPORT_WIDTH_INCHES = 16.0
 EXPORT_DPI = 240
@@ -54,6 +55,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--image-dir", default="generated_graphs")
     p.add_argument("--badge-zoom", type=float, default=0.085)
     p.add_argument("--api-key-env", default="APIFOOTBALL_KEY")
+    p.add_argument(
+        "--compute-backend",
+        choices=("auto", "cpu", "cuda"),
+        default=os.getenv("COMPUTE_BACKEND", "auto"),
+        help="Requested compute backend. Phase 1 keeps execution on CPU with optional CUDA detection.",
+    )
     return p.parse_args()
 
 
@@ -385,6 +392,18 @@ def render_report(
 
 def main() -> None:
     args = parse_args()
+    backend = resolve_compute_backend(args.compute_backend, allow_cuda_execution=False)
+    print(
+        "INFO: compute backend requested=%s selected=%s reason=%s cuda_enabled=%s cupy_available=%s cuda_devices=%s"
+        % (
+            backend.requested_backend,
+            backend.selected_backend,
+            backend.reason,
+            backend.cuda_enabled,
+            backend.cupy_available,
+            backend.cuda_device_count,
+        )
+    )
     password = os.getenv(args.mysql_password_env, "")
     if not password:
         raise SystemExit(f"{args.mysql_password_env} is required")
