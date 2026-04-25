@@ -1,0 +1,168 @@
+day,task_seq,item_type,league_code,league_name,api_league_id,start_year,estimated_calls,notes
+1,1,rosters,TOP5,Top5 Rosters,0,2025,244,players/squads per distinct team in scope
+1,2,league_season,E0,Premier League,39,2025,705,fixtures=1 events=664 players=40
+1,3,league_season,SP1,La Liga,140,2025,681,fixtures=1 events=640 players=40
+1,4,league_season,I1,Serie A,135,2025,701,fixtures=1 events=660 players=40
+1,5,league_season,D1,Bundesliga,78,2025,577,fixtures=1 events=540 players=36
+1,6,league_season,F1,Ligue 1,61,2025,573,fixtures=1 events=536 players=36
+1,7,league_season,E0,Premier League,39,2024,801,fixtures=1 events=760 players=40
+1,8,league_season,SP1,La Liga,140,2024,801,fixtures=1 events=760 players=40
+1,9,league_season,I1,Serie A,135,2024,801,fixtures=1 events=760 players=40
+1,10,league_season,D1,Bundesliga,78,2024,649,fixtures=1 events=612 players=36
+1,11,league_season,F1,Ligue 1,61,2024,649,fixtures=1 events=612 players=36
+1,12,league_season,E0,Premier League,39,2023,801,fixtures=1 events=760 players=40
+1,13,league_season,SP1,La Liga,140,2023,801,fixtures=1 events=760 players=40
+1,14,league_season,I1,Serie A,135,2023,801,fixtures=1 events=760 players=40
+1,15,league_season,D1,Bundesliga,78,2023,649,fixtures=1 events=612 players=36
+1,16,league_season,F1,Ligue 1,61,2023,649,fixtures=1 events=612 players=36
+1,17,league_season,E0,Premier League,39,2022,801,fixtures=1 events=760 players=40
+1,18,league_season,SP1,La Liga,140,2022,801,fixtures=1 events=760 players=40
+1,19,league_season,I1,Serie A,135,2022,801,fixtures=1 events=760 players=40
+1,20,league_season,D1,Bundesliga,78,2022,649,fixtures=1 events=612 players=36
+1,21,league_season,F1,Ligue 1,61,2022,801,fixtures=1 events=760 players=40
+1,22,league_season,E0,Premier League,39,2021,801,fixtures=1 events=760 players=40
+1,23,league_season,SP1,La Liga,140,2021,801,fixtures=1 events=760 players=40
+1,24,league_season,I1,Serie A,135,2021,801,fixtures=1 events=760 players=40
+1,25,league_season,D1,Bundesliga,78,2021,649,fixtures=1 events=612 players=36
+1,26,league_season,F1,Ligue 1,61,2021,801,fixtures=1 events=760 players=40
+1,27,league_season,E0,Premier League,39,2020,939,fixtures=1 events=892 players=46
+1,28,league_season,SP1,La Liga,140,2020,921,fixtures=1 events=874 players=46
+1,29,league_season_part_1,I1,Serie A,135,2020,1000,fixtures=1 events=956 players=46 | chunk=1
+1,30,league_season_part_2,I1,Serie A,135,2020,3,fixtures=1 events=956 players=46 | chunk=2
+1,31,league_season,D1,Bundesliga,78,2020,649,fixtures=1 events=612 players=36
+1,32,league_season,F1,Ligue 1,61,2020,801,fixtures=1 events=760 players=40
+1,33,league_season,E0,Premier League,39,2019,669,fixtures=1 events=628 players=40
+1,34,league_season,SP1,La Liga,140,2019,687,fixtures=1 events=646 players=40
+1,35,league_season,I1,Serie A,135,2019,605,fixtures=1 events=564 players=40
+1,36,league_season,D1,Bundesliga,78,2019,649,fixtures=1 events=612 players=36
+1,37,league_season,F1,Ligue 1,61,2019,599,fixtures=1 events=558 players=40
+1,38,league_season,E0,Premier League,39,2018,801,fixtures=1 events=760 players=40
+1,39,league_season,SP1,La Liga,140,2018,801,fixtures=1 events=760 players=40
+1,40,league_season,I1,Serie A,135,2018,801,fixtures=1 events=760 players=40
+1,41,league_season,D1,Bundesliga,78,2018,649,fixtures=1 events=612 players=36
+1,42,league_season,F1,Ligue 1,61,2018,801,fixtures=1 events=760 players=40
+1,43,league_season,E0,Premier League,39,2017,801,fixtures=1 events=760 players=40
+1,44,league_season,SP1,La Liga,140,2017,801,fixtures=1 events=760 players=40
+2,45,league_season,I1,Serie A,135,2017,801,fixtures=1 events=760 players=40
+2,46,league_season,D1,Bundesliga,78,2017,649,fixtures=1 events=612 players=36
+2,47,league_season,F1,Ligue 1,61,2017,801,fixtures=1 events=760 players=40
+2,48,league_season,E0,Premier League,39,2016,801,fixtures=1 events=760 players=40
+2,49,league_season,SP1,La Liga,140,2016,801,fixtures=1 events=760 players=40
+2,50,league_season,I1,Serie A,135,2016,801,fixtures=1 events=760 players=40
+2,51,league_season,D1,Bundesliga,78,2016,649,fixtures=1 events=612 players=36
+2,52,league_season,F1,Ligue 1,61,2016,801,fixtures=1 events=760 players=40
+2,53,league_season,E0,Premier League,39,2015,801,fixtures=1 events=760 players=40
+2,54,league_season,SP1,La Liga,140,2015,801,fixtures=1 events=760 players=40
+2,55,league_season,I1,Serie A,135,2015,801,fixtures=1 events=760 players=40
+2,56,league_season,D1,Bundesliga,78,2015,649,fixtures=1 events=612 players=36
+2,57,league_season,F1,Ligue 1,61,2015,801,fixtures=1 events=760 players=40
+2,58,league_season,E0,Premier League,39,2014,801,fixtures=1 events=760 players=40
+2,59,league_season,SP1,La Liga,140,2014,801,fixtures=1 events=760 players=40
+2,60,league_season,I1,Serie A,135,2014,801,fixtures=1 events=760 players=40
+2,61,league_season,D1,Bundesliga,78,2014,649,fixtures=1 events=612 players=36
+2,62,league_season,F1,Ligue 1,61,2014,801,fixtures=1 events=760 players=40
+2,63,league_season,E0,Premier League,39,2013,801,fixtures=1 events=760 players=40
+2,64,league_season,SP1,La Liga,140,2013,801,fixtures=1 events=760 players=40
+2,65,league_season,I1,Serie A,135,2013,801,fixtures=1 events=760 players=40
+2,66,league_season,D1,Bundesliga,78,2013,649,fixtures=1 events=612 players=36
+2,67,league_season,F1,Ligue 1,61,2013,801,fixtures=1 events=760 players=40
+2,68,league_season,E0,Premier League,39,2012,801,fixtures=1 events=760 players=40
+2,69,league_season,SP1,La Liga,140,2012,801,fixtures=1 events=760 players=40
+2,70,league_season,I1,Serie A,135,2012,801,fixtures=1 events=760 players=40
+2,71,league_season,D1,Bundesliga,78,2012,649,fixtures=1 events=612 players=36
+2,72,league_season,F1,Ligue 1,61,2012,801,fixtures=1 events=760 players=40
+2,73,league_season,E0,Premier League,39,2011,801,fixtures=1 events=760 players=40
+2,74,league_season,SP1,La Liga,140,2011,801,fixtures=1 events=760 players=40
+2,75,league_season,I1,Serie A,135,2011,801,fixtures=1 events=760 players=40
+2,76,league_season,D1,Bundesliga,78,2011,649,fixtures=1 events=612 players=36
+2,77,league_season,F1,Ligue 1,61,2011,801,fixtures=1 events=760 players=40
+2,78,league_season,E0,Premier League,39,2010,801,fixtures=1 events=760 players=40
+2,79,league_season,SP1,La Liga,140,2010,801,fixtures=1 events=760 players=40
+2,80,league_season,I1,Serie A,135,2010,801,fixtures=1 events=760 players=40
+2,81,league_season,D1,Bundesliga,78,2010,649,fixtures=1 events=612 players=36
+2,82,league_season,F1,Ligue 1,61,2010,801,fixtures=1 events=760 players=40
+2,83,league_season,E0,Premier League,39,2009,801,fixtures=1 events=760 players=40
+2,84,league_season,SP1,La Liga,140,2009,801,fixtures=1 events=760 players=40
+2,85,league_season,I1,Serie A,135,2009,801,fixtures=1 events=760 players=40
+3,86,league_season,D1,Bundesliga,78,2009,649,fixtures=1 events=612 players=36
+3,87,league_season,F1,Ligue 1,61,2009,801,fixtures=1 events=760 players=40
+3,88,league_season,E0,Premier League,39,2008,801,fixtures=1 events=760 players=40
+3,89,league_season,SP1,La Liga,140,2008,801,fixtures=1 events=760 players=40
+3,90,league_season,I1,Serie A,135,2008,801,fixtures=1 events=760 players=40
+3,91,league_season,D1,Bundesliga,78,2008,649,fixtures=1 events=612 players=36
+3,92,league_season,F1,Ligue 1,61,2008,801,fixtures=1 events=760 players=40
+3,93,league_season,E0,Premier League,39,2007,801,fixtures=1 events=760 players=40
+3,94,league_season,SP1,La Liga,140,2007,801,fixtures=1 events=760 players=40
+3,95,league_season,I1,Serie A,135,2007,801,fixtures=1 events=760 players=40
+3,96,league_season,D1,Bundesliga,78,2007,649,fixtures=1 events=612 players=36
+3,97,league_season,F1,Ligue 1,61,2007,801,fixtures=1 events=760 players=40
+3,98,league_season,E0,Premier League,39,2006,801,fixtures=1 events=760 players=40
+3,99,league_season,SP1,La Liga,140,2006,801,fixtures=1 events=760 players=40
+3,100,league_season,I1,Serie A,135,2006,801,fixtures=1 events=760 players=40
+3,101,league_season,D1,Bundesliga,78,2006,649,fixtures=1 events=612 players=36
+3,102,league_season,F1,Ligue 1,61,2006,801,fixtures=1 events=760 players=40
+3,103,league_season,E0,Premier League,39,2005,801,fixtures=1 events=760 players=40
+3,104,league_season,SP1,La Liga,140,2005,801,fixtures=1 events=760 players=40
+3,105,league_season,I1,Serie A,135,2005,801,fixtures=1 events=760 players=40
+3,106,league_season,D1,Bundesliga,78,2005,649,fixtures=1 events=612 players=36
+3,107,league_season,F1,Ligue 1,61,2005,801,fixtures=1 events=760 players=40
+3,108,league_season,E0,Premier League,39,2004,801,fixtures=1 events=760 players=40
+3,109,league_season,SP1,La Liga,140,2004,801,fixtures=1 events=760 players=40
+3,110,league_season,I1,Serie A,135,2004,801,fixtures=1 events=760 players=40
+3,111,league_season,D1,Bundesliga,78,2004,649,fixtures=1 events=612 players=36
+3,112,league_season,F1,Ligue 1,61,2004,801,fixtures=1 events=760 players=40
+3,113,league_season,E0,Premier League,39,2003,801,fixtures=1 events=760 players=40
+3,114,league_season,SP1,La Liga,140,2003,801,fixtures=1 events=760 players=40
+3,115,league_season,I1,Serie A,135,2003,649,fixtures=1 events=612 players=36
+3,116,league_season,D1,Bundesliga,78,2003,649,fixtures=1 events=612 players=36
+3,117,league_season,F1,Ligue 1,61,2003,801,fixtures=1 events=760 players=40
+3,118,league_season,E0,Premier League,39,2002,801,fixtures=1 events=760 players=40
+3,119,league_season,SP1,La Liga,140,2002,801,fixtures=1 events=760 players=40
+3,120,league_season,I1,Serie A,135,2002,649,fixtures=1 events=612 players=36
+3,121,league_season,D1,Bundesliga,78,2002,649,fixtures=1 events=612 players=36
+3,122,league_season,F1,Ligue 1,61,2002,801,fixtures=1 events=760 players=40
+3,123,league_season,E0,Premier League,39,2001,801,fixtures=1 events=760 players=40
+3,124,league_season,SP1,La Liga,140,2001,801,fixtures=1 events=760 players=40
+3,125,league_season,I1,Serie A,135,2001,649,fixtures=1 events=612 players=36
+3,126,league_season,D1,Bundesliga,78,2001,649,fixtures=1 events=612 players=36
+3,127,league_season,F1,Ligue 1,61,2001,649,fixtures=1 events=612 players=36
+4,128,league_season,E0,Premier League,39,2000,801,fixtures=1 events=760 players=40
+4,129,league_season,SP1,La Liga,140,2000,801,fixtures=1 events=760 players=40
+4,130,league_season,I1,Serie A,135,2000,649,fixtures=1 events=612 players=36
+4,131,league_season,D1,Bundesliga,78,2000,649,fixtures=1 events=612 players=36
+4,132,league_season,F1,Ligue 1,61,2000,649,fixtures=1 events=612 players=36
+4,133,league_season,E0,Premier League,39,1999,801,fixtures=1 events=760 players=40
+4,134,league_season,SP1,La Liga,140,1999,801,fixtures=1 events=760 players=40
+4,135,league_season,I1,Serie A,135,1999,649,fixtures=1 events=612 players=36
+4,136,league_season,D1,Bundesliga,78,1999,649,fixtures=1 events=612 players=36
+4,137,league_season,F1,Ligue 1,61,1999,649,fixtures=1 events=612 players=36
+4,138,league_season,E0,Premier League,39,1998,801,fixtures=1 events=760 players=40
+4,139,league_season,SP1,La Liga,140,1998,801,fixtures=1 events=760 players=40
+4,140,league_season,I1,Serie A,135,1998,649,fixtures=1 events=612 players=36
+4,141,league_season,D1,Bundesliga,78,1998,649,fixtures=1 events=612 players=36
+4,142,league_season,F1,Ligue 1,61,1998,649,fixtures=1 events=612 players=36
+4,143,league_season,E0,Premier League,39,1997,801,fixtures=1 events=760 players=40
+4,144,league_season,SP1,La Liga,140,1997,801,fixtures=1 events=760 players=40
+4,145,league_season,I1,Serie A,135,1997,649,fixtures=1 events=612 players=36
+4,146,league_season,D1,Bundesliga,78,1997,649,fixtures=1 events=612 players=36
+4,147,league_season,F1,Ligue 1,61,1997,649,fixtures=1 events=612 players=36
+4,148,league_season,E0,Premier League,39,1996,801,fixtures=1 events=760 players=40
+4,149,league_season,SP1,La Liga,140,1996,969,fixtures=1 events=924 players=44
+4,150,league_season,I1,Serie A,135,1996,649,fixtures=1 events=612 players=36
+4,151,league_season,D1,Bundesliga,78,1996,649,fixtures=1 events=612 players=36
+4,152,league_season,F1,Ligue 1,61,1996,801,fixtures=1 events=760 players=40
+4,153,league_season,E0,Premier League,39,1995,801,fixtures=1 events=760 players=40
+4,154,league_season,SP1,La Liga,140,1995,969,fixtures=1 events=924 players=44
+4,155,league_season,I1,Serie A,135,1995,649,fixtures=1 events=612 players=36
+4,156,league_season,D1,Bundesliga,78,1995,649,fixtures=1 events=612 players=36
+4,157,league_season,F1,Ligue 1,61,1995,801,fixtures=1 events=760 players=40
+4,158,league_season,E0,Premier League,39,1994,969,fixtures=1 events=924 players=44
+4,159,league_season,SP1,La Liga,140,1994,801,fixtures=1 events=760 players=40
+4,160,league_season,I1,Serie A,135,1994,649,fixtures=1 events=612 players=36
+4,161,league_season,D1,Bundesliga,78,1994,649,fixtures=1 events=612 players=36
+4,162,league_season,F1,Ligue 1,61,1994,801,fixtures=1 events=760 players=40
+4,163,league_season,E0,Premier League,39,1993,969,fixtures=1 events=924 players=44
+4,164,league_season,SP1,La Liga,140,1993,801,fixtures=1 events=760 players=40
+4,165,league_season,I1,Serie A,135,1993,649,fixtures=1 events=612 players=36
+4,166,league_season,D1,Bundesliga,78,1993,649,fixtures=1 events=612 players=36
+4,167,league_season,F1,Ligue 1,61,1993,801,fixtures=1 events=760 players=40

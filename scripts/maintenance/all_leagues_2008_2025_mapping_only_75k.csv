@@ -1,0 +1,465 @@
+day,task_seq,item_type,league_code,league_name,api_league_id,start_year,estimated_calls,notes
+1,1,league_season,B1,Belgium_Jupiler_League,0,2025,541,fixtures=1 events=540 players=0
+1,2,league_season,D1,Germany_Bundesliga_1,0,2025,541,fixtures=1 events=540 players=0
+1,3,league_season,D2,Germany_Bundesliga_2,0,2025,541,fixtures=1 events=540 players=0
+1,4,league_season,E0,England_Premier_League,0,2025,665,fixtures=1 events=664 players=0
+1,5,league_season_part_1,E1,England_Championship,0,2025,1000,fixtures=1 events=1056 players=0 | chunk=1
+1,6,league_season_part_2,E1,England_Championship,0,2025,57,fixtures=1 events=1056 players=0 | chunk=2
+1,7,league_season_part_1,E2,England_League_1,0,2025,1000,fixtures=1 events=1050 players=0 | chunk=1
+1,8,league_season_part_2,E2,England_League_1,0,2025,51,fixtures=1 events=1050 players=0 | chunk=2
+1,9,league_season_part_1,E3,England_League_2,0,2025,1000,fixtures=1 events=1058 players=0 | chunk=1
+1,10,league_season_part_2,E3,England_League_2,0,2025,59,fixtures=1 events=1058 players=0 | chunk=2
+1,11,league_season_part_1,EC,England_Conference,0,2025,1000,fixtures=1 events=1080 players=0 | chunk=1
+1,12,league_season_part_2,EC,England_Conference,0,2025,81,fixtures=1 events=1080 players=0 | chunk=2
+1,13,league_season,F1,France_Le_Championnat,0,2025,537,fixtures=1 events=536 players=0
+1,14,league_season,F2,France_Division_2,0,2025,557,fixtures=1 events=556 players=0
+1,15,league_season,G1,Greece_Ethniki_Katigoria,0,2025,405,fixtures=1 events=404 players=0
+1,16,league_season,I1,Italy_Serie_A,0,2025,661,fixtures=1 events=660 players=0
+1,17,league_season,I2,Italy_Serie_B,0,2025,701,fixtures=1 events=700 players=0
+1,18,league_season,N1,Netherlands_Eredivisie,0,2025,547,fixtures=1 events=546 players=0
+1,19,league_season,P1,Portugal_Liga_I,0,2025,539,fixtures=1 events=538 players=0
+1,20,league_season,SC0,Scotland_Premier_League,0,2025,397,fixtures=1 events=396 players=0
+1,21,league_season,SC1,Scotland_Division_1,0,2025,341,fixtures=1 events=340 players=0
+1,22,league_season,SC2,Scotland_Division_2,0,2025,341,fixtures=1 events=340 players=0
+1,23,league_season,SC3,Scotland_Division_3,0,2025,341,fixtures=1 events=340 players=0
+1,24,league_season,SP1,Spain_La_Liga,0,2025,641,fixtures=1 events=640 players=0
+1,25,league_season,SP2,Spain_La_Liga_2,0,2025,793,fixtures=1 events=792 players=0
+1,26,league_season,T1,Turkey_Ligi_1,0,2025,541,fixtures=1 events=540 players=0
+1,27,league_season,B1,Belgium_Jupiler_League,0,2024,625,fixtures=1 events=624 players=0
+1,28,league_season,D1,Germany_Bundesliga_1,0,2024,613,fixtures=1 events=612 players=0
+1,29,league_season,D2,Germany_Bundesliga_2,0,2024,613,fixtures=1 events=612 players=0
+1,30,league_season,E0,England_Premier_League,0,2024,761,fixtures=1 events=760 players=0
+1,31,league_season_part_1,E1,England_Championship,0,2024,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,32,league_season_part_2,E1,England_Championship,0,2024,105,fixtures=1 events=1104 players=0 | chunk=2
+1,33,league_season_part_1,E2,England_League_1,0,2024,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,34,league_season_part_2,E2,England_League_1,0,2024,105,fixtures=1 events=1104 players=0 | chunk=2
+1,35,league_season_part_1,E3,England_League_2,0,2024,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,36,league_season_part_2,E3,England_League_2,0,2024,105,fixtures=1 events=1104 players=0 | chunk=2
+1,37,league_season_part_1,EC,England_Conference,0,2024,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,38,league_season_part_2,EC,England_Conference,0,2024,105,fixtures=1 events=1104 players=0 | chunk=2
+1,39,league_season,F1,France_Le_Championnat,0,2024,613,fixtures=1 events=612 players=0
+1,40,league_season,F2,France_Division_2,0,2024,613,fixtures=1 events=612 players=0
+1,41,league_season,G1,Greece_Ethniki_Katigoria,0,2024,467,fixtures=1 events=466 players=0
+1,42,league_season,I1,Italy_Serie_A,0,2024,761,fixtures=1 events=760 players=0
+1,43,league_season,I2,Italy_Serie_B,0,2024,761,fixtures=1 events=760 players=0
+1,44,league_season,N1,Netherlands_Eredivisie,0,2024,613,fixtures=1 events=612 players=0
+1,45,league_season,P1,Portugal_Liga_I,0,2024,613,fixtures=1 events=612 players=0
+1,46,league_season,SC0,Scotland_Premier_League,0,2024,457,fixtures=1 events=456 players=0
+1,47,league_season,SC1,Scotland_Division_1,0,2024,361,fixtures=1 events=360 players=0
+1,48,league_season,SC2,Scotland_Division_2,0,2024,361,fixtures=1 events=360 players=0
+1,49,league_season,SC3,Scotland_Division_3,0,2024,361,fixtures=1 events=360 players=0
+1,50,league_season,SP1,Spain_La_Liga,0,2024,761,fixtures=1 events=760 players=0
+1,51,league_season,SP2,Spain_La_Liga_2,0,2024,925,fixtures=1 events=924 players=0
+1,52,league_season,T1,Turkey_Ligi_1,0,2024,685,fixtures=1 events=684 players=0
+1,53,league_season,B1,Belgium_Jupiler_League,0,2023,625,fixtures=1 events=624 players=0
+1,54,league_season,D1,Germany_Bundesliga_1,0,2023,613,fixtures=1 events=612 players=0
+1,55,league_season,D2,Germany_Bundesliga_2,0,2023,613,fixtures=1 events=612 players=0
+1,56,league_season,E0,England_Premier_League,0,2023,761,fixtures=1 events=760 players=0
+1,57,league_season_part_1,E1,England_Championship,0,2023,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,58,league_season_part_2,E1,England_Championship,0,2023,105,fixtures=1 events=1104 players=0 | chunk=2
+1,59,league_season_part_1,E2,England_League_1,0,2023,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,60,league_season_part_2,E2,England_League_1,0,2023,105,fixtures=1 events=1104 players=0 | chunk=2
+1,61,league_season_part_1,E3,England_League_2,0,2023,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,62,league_season_part_2,E3,England_League_2,0,2023,105,fixtures=1 events=1104 players=0 | chunk=2
+1,63,league_season_part_1,EC,England_Conference,0,2023,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,64,league_season_part_2,EC,England_Conference,0,2023,105,fixtures=1 events=1104 players=0 | chunk=2
+1,65,league_season,F1,France_Le_Championnat,0,2023,613,fixtures=1 events=612 players=0
+1,66,league_season,F2,France_Division_2,0,2023,761,fixtures=1 events=760 players=0
+1,67,league_season,G1,Greece_Ethniki_Katigoria,0,2023,481,fixtures=1 events=480 players=0
+1,68,league_season,I1,Italy_Serie_A,0,2023,761,fixtures=1 events=760 players=0
+1,69,league_season,I2,Italy_Serie_B,0,2023,761,fixtures=1 events=760 players=0
+1,70,league_season,N1,Netherlands_Eredivisie,0,2023,613,fixtures=1 events=612 players=0
+1,71,league_season,P1,Portugal_Liga_I,0,2023,613,fixtures=1 events=612 players=0
+1,72,league_season,SC0,Scotland_Premier_League,0,2023,457,fixtures=1 events=456 players=0
+1,73,league_season,SC1,Scotland_Division_1,0,2023,361,fixtures=1 events=360 players=0
+1,74,league_season,SC2,Scotland_Division_2,0,2023,361,fixtures=1 events=360 players=0
+1,75,league_season,SC3,Scotland_Division_3,0,2023,361,fixtures=1 events=360 players=0
+1,76,league_season,SP1,Spain_La_Liga,0,2023,761,fixtures=1 events=760 players=0
+1,77,league_season,SP2,Spain_La_Liga_2,0,2023,925,fixtures=1 events=924 players=0
+1,78,league_season,T1,Turkey_Ligi_1,0,2023,761,fixtures=1 events=760 players=0
+1,79,league_season,B1,Belgium_Jupiler_League,0,2022,613,fixtures=1 events=612 players=0
+1,80,league_season,D1,Germany_Bundesliga_1,0,2022,613,fixtures=1 events=612 players=0
+1,81,league_season,D2,Germany_Bundesliga_2,0,2022,613,fixtures=1 events=612 players=0
+1,82,league_season,E0,England_Premier_League,0,2022,761,fixtures=1 events=760 players=0
+1,83,league_season_part_1,E1,England_Championship,0,2022,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,84,league_season_part_2,E1,England_Championship,0,2022,105,fixtures=1 events=1104 players=0 | chunk=2
+1,85,league_season_part_1,E2,England_League_1,0,2022,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,86,league_season_part_2,E2,England_League_1,0,2022,105,fixtures=1 events=1104 players=0 | chunk=2
+1,87,league_season_part_1,E3,England_League_2,0,2022,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,88,league_season_part_2,E3,England_League_2,0,2022,105,fixtures=1 events=1104 players=0 | chunk=2
+1,89,league_season_part_1,EC,England_Conference,0,2022,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,90,league_season_part_2,EC,England_Conference,0,2022,105,fixtures=1 events=1104 players=0 | chunk=2
+1,91,league_season,F1,France_Le_Championnat,0,2022,761,fixtures=1 events=760 players=0
+1,92,league_season,F2,France_Division_2,0,2022,761,fixtures=1 events=760 players=0
+1,93,league_season,G1,Greece_Ethniki_Katigoria,0,2022,481,fixtures=1 events=480 players=0
+1,94,league_season,I1,Italy_Serie_A,0,2022,761,fixtures=1 events=760 players=0
+1,95,league_season,I2,Italy_Serie_B,0,2022,761,fixtures=1 events=760 players=0
+1,96,league_season,N1,Netherlands_Eredivisie,0,2022,613,fixtures=1 events=612 players=0
+1,97,league_season,P1,Portugal_Liga_I,0,2022,613,fixtures=1 events=612 players=0
+1,98,league_season,SC0,Scotland_Premier_League,0,2022,457,fixtures=1 events=456 players=0
+1,99,league_season,SC1,Scotland_Division_1,0,2022,361,fixtures=1 events=360 players=0
+1,100,league_season,SC2,Scotland_Division_2,0,2022,361,fixtures=1 events=360 players=0
+1,101,league_season,SC3,Scotland_Division_3,0,2022,361,fixtures=1 events=360 players=0
+1,102,league_season,SP1,Spain_La_Liga,0,2022,761,fixtures=1 events=760 players=0
+1,103,league_season,SP2,Spain_La_Liga_2,0,2022,925,fixtures=1 events=924 players=0
+1,104,league_season,T1,Turkey_Ligi_1,0,2022,685,fixtures=1 events=684 players=0
+1,105,league_season,B1,Belgium_Jupiler_League,0,2021,613,fixtures=1 events=612 players=0
+1,106,league_season,D1,Germany_Bundesliga_1,0,2021,613,fixtures=1 events=612 players=0
+1,107,league_season,D2,Germany_Bundesliga_2,0,2021,613,fixtures=1 events=612 players=0
+1,108,league_season,E0,England_Premier_League,0,2021,761,fixtures=1 events=760 players=0
+1,109,league_season_part_1,E1,England_Championship,0,2021,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,110,league_season_part_2,E1,England_Championship,0,2021,105,fixtures=1 events=1104 players=0 | chunk=2
+1,111,league_season_part_1,E2,England_League_1,0,2021,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,112,league_season_part_2,E2,England_League_1,0,2021,105,fixtures=1 events=1104 players=0 | chunk=2
+1,113,league_season_part_1,E3,England_League_2,0,2021,1000,fixtures=1 events=1104 players=0 | chunk=1
+1,114,league_season_part_2,E3,England_League_2,0,2021,105,fixtures=1 events=1104 players=0 | chunk=2
+1,115,league_season_part_1,EC,England_Conference,0,2021,1000,fixtures=1 events=1012 players=0 | chunk=1
+1,116,league_season_part_2,EC,England_Conference,0,2021,13,fixtures=1 events=1012 players=0 | chunk=2
+1,117,league_season,F1,France_Le_Championnat,0,2021,761,fixtures=1 events=760 players=0
+1,118,league_season,F2,France_Division_2,0,2021,761,fixtures=1 events=760 players=0
+1,119,league_season,G1,Greece_Ethniki_Katigoria,0,2021,481,fixtures=1 events=480 players=0
+1,120,league_season,I1,Italy_Serie_A,0,2021,761,fixtures=1 events=760 players=0
+1,121,league_season,I2,Italy_Serie_B,0,2021,761,fixtures=1 events=760 players=0
+1,122,league_season,N1,Netherlands_Eredivisie,0,2021,613,fixtures=1 events=612 players=0
+1,123,league_season,P1,Portugal_Liga_I,0,2021,613,fixtures=1 events=612 players=0
+1,124,league_season,SC0,Scotland_Premier_League,0,2021,457,fixtures=1 events=456 players=0
+1,125,league_season,SC1,Scotland_Division_1,0,2021,361,fixtures=1 events=360 players=0
+1,126,league_season,SC2,Scotland_Division_2,0,2021,361,fixtures=1 events=360 players=0
+1,127,league_season,SC3,Scotland_Division_3,0,2021,361,fixtures=1 events=360 players=0
+1,128,league_season,SP1,Spain_La_Liga,0,2021,761,fixtures=1 events=760 players=0
+2,129,league_season,SP2,Spain_La_Liga_2,0,2021,925,fixtures=1 events=924 players=0
+2,130,league_season,T1,Turkey_Ligi_1,0,2021,761,fixtures=1 events=760 players=0
+2,131,league_season,B1,Belgium_Jupiler_League,0,2020,613,fixtures=1 events=612 players=0
+2,132,league_season,D1,Germany_Bundesliga_1,0,2020,613,fixtures=1 events=612 players=0
+2,133,league_season,D2,Germany_Bundesliga_2,0,2020,613,fixtures=1 events=612 players=0
+2,134,league_season,E0,England_Premier_League,0,2020,893,fixtures=1 events=892 players=0
+2,135,league_season_part_1,E1,England_Championship,0,2020,1000,fixtures=1 events=1258 players=0 | chunk=1
+2,136,league_season_part_2,E1,England_Championship,0,2020,259,fixtures=1 events=1258 players=0 | chunk=2
+2,137,league_season_part_1,E2,England_League_1,0,2020,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,138,league_season_part_2,E2,England_League_1,0,2020,105,fixtures=1 events=1104 players=0 | chunk=2
+2,139,league_season_part_1,E3,England_League_2,0,2020,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,140,league_season_part_2,E3,England_League_2,0,2020,105,fixtures=1 events=1104 players=0 | chunk=2
+2,141,league_season,EC,England_Conference,0,2020,955,fixtures=1 events=954 players=0
+2,142,league_season,F1,France_Le_Championnat,0,2020,761,fixtures=1 events=760 players=0
+2,143,league_season,F2,France_Division_2,0,2020,761,fixtures=1 events=760 players=0
+2,144,league_season,G1,Greece_Ethniki_Katigoria,0,2020,541,fixtures=1 events=540 players=0
+2,145,league_season,I1,Italy_Serie_A,0,2020,957,fixtures=1 events=956 players=0
+2,146,league_season,I2,Italy_Serie_B,0,2020,901,fixtures=1 events=900 players=0
+2,147,league_season,N1,Netherlands_Eredivisie,0,2020,613,fixtures=1 events=612 players=0
+2,148,league_season,P1,Portugal_Liga_I,0,2020,707,fixtures=1 events=706 players=0
+2,149,league_season,SC0,Scotland_Premier_League,0,2020,457,fixtures=1 events=456 players=0
+2,150,league_season,SC1,Scotland_Division_1,0,2020,271,fixtures=1 events=270 players=0
+2,151,league_season,SC2,Scotland_Division_2,0,2020,221,fixtures=1 events=220 players=0
+2,152,league_season,SC3,Scotland_Division_3,0,2020,221,fixtures=1 events=220 players=0
+2,153,league_season,SP1,Spain_La_Liga,0,2020,875,fixtures=1 events=874 players=0
+2,154,league_season_part_1,SP2,Spain_La_Liga_2,0,2020,1000,fixtures=1 events=1052 players=0 | chunk=1
+2,155,league_season_part_2,SP2,Spain_La_Liga_2,0,2020,53,fixtures=1 events=1052 players=0 | chunk=2
+2,156,league_season,T1,Turkey_Ligi_1,0,2020,931,fixtures=1 events=930 players=0
+2,157,league_season,B1,Belgium_Jupiler_League,0,2019,465,fixtures=1 events=464 players=0
+2,158,league_season,D1,Germany_Bundesliga_1,0,2019,613,fixtures=1 events=612 players=0
+2,159,league_season,D2,Germany_Bundesliga_2,0,2019,613,fixtures=1 events=612 players=0
+2,160,league_season,E0,England_Premier_League,0,2019,629,fixtures=1 events=628 players=0
+2,161,league_season,E1,England_Championship,0,2019,951,fixtures=1 events=950 players=0
+2,162,league_season,E2,England_League_1,0,2019,801,fixtures=1 events=800 players=0
+2,163,league_season,E3,England_League_2,0,2019,881,fixtures=1 events=880 players=0
+2,164,league_season,EC,England_Conference,0,2019,903,fixtures=1 events=902 players=0
+2,165,league_season,F1,France_Le_Championnat,0,2019,559,fixtures=1 events=558 players=0
+2,166,league_season,F2,France_Division_2,0,2019,561,fixtures=1 events=560 players=0
+2,167,league_season,G1,Greece_Ethniki_Katigoria,0,2019,421,fixtures=1 events=420 players=0
+2,168,league_season,I1,Italy_Serie_A,0,2019,565,fixtures=1 events=564 players=0
+2,169,league_season,I2,Italy_Serie_B,0,2019,621,fixtures=1 events=620 players=0
+2,170,league_season,N1,Netherlands_Eredivisie,0,2019,465,fixtures=1 events=464 players=0
+2,171,league_season,P1,Portugal_Liga_I,0,2019,519,fixtures=1 events=518 players=0
+2,172,league_season,SC0,Scotland_Premier_League,0,2019,359,fixtures=1 events=358 players=0
+2,173,league_season,SC1,Scotland_Division_1,0,2019,275,fixtures=1 events=274 players=0
+2,174,league_season,SC2,Scotland_Division_2,0,2019,279,fixtures=1 events=278 players=0
+2,175,league_season,SC3,Scotland_Division_3,0,2019,275,fixtures=1 events=274 players=0
+2,176,league_season,SP1,Spain_La_Liga,0,2019,647,fixtures=1 events=646 players=0
+2,177,league_season,SP2,Spain_La_Liga_2,0,2019,797,fixtures=1 events=796 players=0
+2,178,league_season,T1,Turkey_Ligi_1,0,2019,523,fixtures=1 events=522 players=0
+2,179,league_season,B1,Belgium_Jupiler_League,0,2018,481,fixtures=1 events=480 players=0
+2,180,league_season,D1,Germany_Bundesliga_1,0,2018,613,fixtures=1 events=612 players=0
+2,181,league_season,D2,Germany_Bundesliga_2,0,2018,613,fixtures=1 events=612 players=0
+2,182,league_season,E0,England_Premier_League,0,2018,761,fixtures=1 events=760 players=0
+2,183,league_season_part_1,E1,England_Championship,0,2018,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,184,league_season_part_2,E1,England_Championship,0,2018,105,fixtures=1 events=1104 players=0 | chunk=2
+2,185,league_season_part_1,E2,England_League_1,0,2018,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,186,league_season_part_2,E2,England_League_1,0,2018,105,fixtures=1 events=1104 players=0 | chunk=2
+2,187,league_season_part_1,E3,England_League_2,0,2018,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,188,league_season_part_2,E3,England_League_2,0,2018,105,fixtures=1 events=1104 players=0 | chunk=2
+2,189,league_season_part_1,EC,England_Conference,0,2018,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,190,league_season_part_2,EC,England_Conference,0,2018,105,fixtures=1 events=1104 players=0 | chunk=2
+2,191,league_season,F1,France_Le_Championnat,0,2018,761,fixtures=1 events=760 players=0
+2,192,league_season,F2,France_Division_2,0,2018,761,fixtures=1 events=760 players=0
+2,193,league_season,G1,Greece_Ethniki_Katigoria,0,2018,481,fixtures=1 events=480 players=0
+2,194,league_season,I1,Italy_Serie_A,0,2018,761,fixtures=1 events=760 players=0
+2,195,league_season,I2,Italy_Serie_B,0,2018,685,fixtures=1 events=684 players=0
+2,196,league_season,N1,Netherlands_Eredivisie,0,2018,613,fixtures=1 events=612 players=0
+2,197,league_season,P1,Portugal_Liga_I,0,2018,613,fixtures=1 events=612 players=0
+2,198,league_season,SC0,Scotland_Premier_League,0,2018,457,fixtures=1 events=456 players=0
+2,199,league_season,SC1,Scotland_Division_1,0,2018,361,fixtures=1 events=360 players=0
+2,200,league_season,SC2,Scotland_Division_2,0,2018,361,fixtures=1 events=360 players=0
+2,201,league_season,SC3,Scotland_Division_3,0,2018,361,fixtures=1 events=360 players=0
+2,202,league_season,SP1,Spain_La_Liga,0,2018,761,fixtures=1 events=760 players=0
+2,203,league_season,SP2,Spain_La_Liga_2,0,2018,925,fixtures=1 events=924 players=0
+2,204,league_season,T1,Turkey_Ligi_1,0,2018,613,fixtures=1 events=612 players=0
+2,205,league_season,B1,Belgium_Jupiler_League,0,2017,481,fixtures=1 events=480 players=0
+2,206,league_season,D1,Germany_Bundesliga_1,0,2017,613,fixtures=1 events=612 players=0
+2,207,league_season,D2,Germany_Bundesliga_2,0,2017,613,fixtures=1 events=612 players=0
+2,208,league_season,E0,England_Premier_League,0,2017,761,fixtures=1 events=760 players=0
+2,209,league_season_part_1,E1,England_Championship,0,2017,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,210,league_season_part_2,E1,England_Championship,0,2017,105,fixtures=1 events=1104 players=0 | chunk=2
+2,211,league_season_part_1,E2,England_League_1,0,2017,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,212,league_season_part_2,E2,England_League_1,0,2017,105,fixtures=1 events=1104 players=0 | chunk=2
+2,213,league_season_part_1,E3,England_League_2,0,2017,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,214,league_season_part_2,E3,England_League_2,0,2017,105,fixtures=1 events=1104 players=0 | chunk=2
+2,215,league_season_part_1,EC,England_Conference,0,2017,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,216,league_season_part_2,EC,England_Conference,0,2017,105,fixtures=1 events=1104 players=0 | chunk=2
+2,217,league_season,F1,France_Le_Championnat,0,2017,761,fixtures=1 events=760 players=0
+2,218,league_season,F2,France_Division_2,0,2017,761,fixtures=1 events=760 players=0
+2,219,league_season,G1,Greece_Ethniki_Katigoria,0,2017,481,fixtures=1 events=480 players=0
+2,220,league_season,I1,Italy_Serie_A,0,2017,761,fixtures=1 events=760 players=0
+2,221,league_season,I2,Italy_Serie_B,0,2017,925,fixtures=1 events=924 players=0
+2,222,league_season,N1,Netherlands_Eredivisie,0,2017,613,fixtures=1 events=612 players=0
+2,223,league_season,P1,Portugal_Liga_I,0,2017,613,fixtures=1 events=612 players=0
+2,224,league_season,SC0,Scotland_Premier_League,0,2017,457,fixtures=1 events=456 players=0
+2,225,league_season,SC1,Scotland_Division_1,0,2017,361,fixtures=1 events=360 players=0
+2,226,league_season,SC2,Scotland_Division_2,0,2017,361,fixtures=1 events=360 players=0
+2,227,league_season,SC3,Scotland_Division_3,0,2017,361,fixtures=1 events=360 players=0
+2,228,league_season,SP1,Spain_La_Liga,0,2017,761,fixtures=1 events=760 players=0
+2,229,league_season,SP2,Spain_La_Liga_2,0,2017,925,fixtures=1 events=924 players=0
+2,230,league_season,T1,Turkey_Ligi_1,0,2017,613,fixtures=1 events=612 players=0
+2,231,league_season,B1,Belgium_Jupiler_League,0,2016,481,fixtures=1 events=480 players=0
+2,232,league_season,D1,Germany_Bundesliga_1,0,2016,613,fixtures=1 events=612 players=0
+2,233,league_season,D2,Germany_Bundesliga_2,0,2016,613,fixtures=1 events=612 players=0
+2,234,league_season,E0,England_Premier_League,0,2016,761,fixtures=1 events=760 players=0
+2,235,league_season_part_1,E1,England_Championship,0,2016,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,236,league_season_part_2,E1,England_Championship,0,2016,105,fixtures=1 events=1104 players=0 | chunk=2
+2,237,league_season_part_1,E2,England_League_1,0,2016,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,238,league_season_part_2,E2,England_League_1,0,2016,105,fixtures=1 events=1104 players=0 | chunk=2
+2,239,league_season_part_1,E3,England_League_2,0,2016,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,240,league_season_part_2,E3,England_League_2,0,2016,105,fixtures=1 events=1104 players=0 | chunk=2
+2,241,league_season_part_1,EC,England_Conference,0,2016,1000,fixtures=1 events=1104 players=0 | chunk=1
+2,242,league_season_part_2,EC,England_Conference,0,2016,105,fixtures=1 events=1104 players=0 | chunk=2
+2,243,league_season,F1,France_Le_Championnat,0,2016,761,fixtures=1 events=760 players=0
+2,244,league_season,F2,France_Division_2,0,2016,761,fixtures=1 events=760 players=0
+2,245,league_season,G1,Greece_Ethniki_Katigoria,0,2016,481,fixtures=1 events=480 players=0
+2,246,league_season,I1,Italy_Serie_A,0,2016,761,fixtures=1 events=760 players=0
+2,247,league_season,I2,Italy_Serie_B,0,2016,925,fixtures=1 events=924 players=0
+2,248,league_season,N1,Netherlands_Eredivisie,0,2016,613,fixtures=1 events=612 players=0
+2,249,league_season,P1,Portugal_Liga_I,0,2016,613,fixtures=1 events=612 players=0
+2,250,league_season,SC0,Scotland_Premier_League,0,2016,457,fixtures=1 events=456 players=0
+2,251,league_season,SC1,Scotland_Division_1,0,2016,361,fixtures=1 events=360 players=0
+2,252,league_season,SC2,Scotland_Division_2,0,2016,361,fixtures=1 events=360 players=0
+3,253,league_season,SC3,Scotland_Division_3,0,2016,361,fixtures=1 events=360 players=0
+3,254,league_season,SP1,Spain_La_Liga,0,2016,761,fixtures=1 events=760 players=0
+3,255,league_season,SP2,Spain_La_Liga_2,0,2016,925,fixtures=1 events=924 players=0
+3,256,league_season,T1,Turkey_Ligi_1,0,2016,613,fixtures=1 events=612 players=0
+3,257,league_season,B1,Belgium_Jupiler_League,0,2015,481,fixtures=1 events=480 players=0
+3,258,league_season,D1,Germany_Bundesliga_1,0,2015,613,fixtures=1 events=612 players=0
+3,259,league_season,D2,Germany_Bundesliga_2,0,2015,613,fixtures=1 events=612 players=0
+3,260,league_season,E0,England_Premier_League,0,2015,761,fixtures=1 events=760 players=0
+3,261,league_season_part_1,E1,England_Championship,0,2015,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,262,league_season_part_2,E1,England_Championship,0,2015,105,fixtures=1 events=1104 players=0 | chunk=2
+3,263,league_season_part_1,E2,England_League_1,0,2015,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,264,league_season_part_2,E2,England_League_1,0,2015,105,fixtures=1 events=1104 players=0 | chunk=2
+3,265,league_season_part_1,E3,England_League_2,0,2015,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,266,league_season_part_2,E3,England_League_2,0,2015,105,fixtures=1 events=1104 players=0 | chunk=2
+3,267,league_season_part_1,EC,England_Conference,0,2015,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,268,league_season_part_2,EC,England_Conference,0,2015,105,fixtures=1 events=1104 players=0 | chunk=2
+3,269,league_season,F1,France_Le_Championnat,0,2015,761,fixtures=1 events=760 players=0
+3,270,league_season,F2,France_Division_2,0,2015,761,fixtures=1 events=760 players=0
+3,271,league_season,G1,Greece_Ethniki_Katigoria,0,2015,481,fixtures=1 events=480 players=0
+3,272,league_season,I1,Italy_Serie_A,0,2015,761,fixtures=1 events=760 players=0
+3,273,league_season,I2,Italy_Serie_B,0,2015,925,fixtures=1 events=924 players=0
+3,274,league_season,N1,Netherlands_Eredivisie,0,2015,613,fixtures=1 events=612 players=0
+3,275,league_season,P1,Portugal_Liga_I,0,2015,613,fixtures=1 events=612 players=0
+3,276,league_season,SC0,Scotland_Premier_League,0,2015,457,fixtures=1 events=456 players=0
+3,277,league_season,SC1,Scotland_Division_1,0,2015,361,fixtures=1 events=360 players=0
+3,278,league_season,SC2,Scotland_Division_2,0,2015,361,fixtures=1 events=360 players=0
+3,279,league_season,SC3,Scotland_Division_3,0,2015,361,fixtures=1 events=360 players=0
+3,280,league_season,SP1,Spain_La_Liga,0,2015,761,fixtures=1 events=760 players=0
+3,281,league_season,SP2,Spain_La_Liga_2,0,2015,925,fixtures=1 events=924 players=0
+3,282,league_season,T1,Turkey_Ligi_1,0,2015,613,fixtures=1 events=612 players=0
+3,283,league_season,B1,Belgium_Jupiler_League,0,2014,481,fixtures=1 events=480 players=0
+3,284,league_season,D1,Germany_Bundesliga_1,0,2014,613,fixtures=1 events=612 players=0
+3,285,league_season,D2,Germany_Bundesliga_2,0,2014,613,fixtures=1 events=612 players=0
+3,286,league_season,E0,England_Premier_League,0,2014,761,fixtures=1 events=760 players=0
+3,287,league_season_part_1,E1,England_Championship,0,2014,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,288,league_season_part_2,E1,England_Championship,0,2014,105,fixtures=1 events=1104 players=0 | chunk=2
+3,289,league_season_part_1,E2,England_League_1,0,2014,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,290,league_season_part_2,E2,England_League_1,0,2014,105,fixtures=1 events=1104 players=0 | chunk=2
+3,291,league_season_part_1,E3,England_League_2,0,2014,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,292,league_season_part_2,E3,England_League_2,0,2014,105,fixtures=1 events=1104 players=0 | chunk=2
+3,293,league_season_part_1,EC,England_Conference,0,2014,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,294,league_season_part_2,EC,England_Conference,0,2014,105,fixtures=1 events=1104 players=0 | chunk=2
+3,295,league_season,F1,France_Le_Championnat,0,2014,761,fixtures=1 events=760 players=0
+3,296,league_season,F2,France_Division_2,0,2014,761,fixtures=1 events=760 players=0
+3,297,league_season,G1,Greece_Ethniki_Katigoria,0,2014,613,fixtures=1 events=612 players=0
+3,298,league_season,I1,Italy_Serie_A,0,2014,761,fixtures=1 events=760 players=0
+3,299,league_season,I2,Italy_Serie_B,0,2014,925,fixtures=1 events=924 players=0
+3,300,league_season,N1,Netherlands_Eredivisie,0,2014,613,fixtures=1 events=612 players=0
+3,301,league_season,P1,Portugal_Liga_I,0,2014,613,fixtures=1 events=612 players=0
+3,302,league_season,SC0,Scotland_Premier_League,0,2014,457,fixtures=1 events=456 players=0
+3,303,league_season,SC1,Scotland_Division_1,0,2014,361,fixtures=1 events=360 players=0
+3,304,league_season,SC2,Scotland_Division_2,0,2014,361,fixtures=1 events=360 players=0
+3,305,league_season,SC3,Scotland_Division_3,0,2014,361,fixtures=1 events=360 players=0
+3,306,league_season,SP1,Spain_La_Liga,0,2014,761,fixtures=1 events=760 players=0
+3,307,league_season,SP2,Spain_La_Liga_2,0,2014,925,fixtures=1 events=924 players=0
+3,308,league_season,T1,Turkey_Ligi_1,0,2014,613,fixtures=1 events=612 players=0
+3,309,league_season,B1,Belgium_Jupiler_League,0,2013,481,fixtures=1 events=480 players=0
+3,310,league_season,D1,Germany_Bundesliga_1,0,2013,613,fixtures=1 events=612 players=0
+3,311,league_season,D2,Germany_Bundesliga_2,0,2013,613,fixtures=1 events=612 players=0
+3,312,league_season,E0,England_Premier_League,0,2013,761,fixtures=1 events=760 players=0
+3,313,league_season_part_1,E1,England_Championship,0,2013,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,314,league_season_part_2,E1,England_Championship,0,2013,105,fixtures=1 events=1104 players=0 | chunk=2
+3,315,league_season_part_1,E2,England_League_1,0,2013,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,316,league_season_part_2,E2,England_League_1,0,2013,105,fixtures=1 events=1104 players=0 | chunk=2
+3,317,league_season_part_1,E3,England_League_2,0,2013,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,318,league_season_part_2,E3,England_League_2,0,2013,105,fixtures=1 events=1104 players=0 | chunk=2
+3,319,league_season_part_1,EC,England_Conference,0,2013,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,320,league_season_part_2,EC,England_Conference,0,2013,105,fixtures=1 events=1104 players=0 | chunk=2
+3,321,league_season,F1,France_Le_Championnat,0,2013,761,fixtures=1 events=760 players=0
+3,322,league_season,F2,France_Division_2,0,2013,761,fixtures=1 events=760 players=0
+3,323,league_season,G1,Greece_Ethniki_Katigoria,0,2013,613,fixtures=1 events=612 players=0
+3,324,league_season,I1,Italy_Serie_A,0,2013,761,fixtures=1 events=760 players=0
+3,325,league_season,I2,Italy_Serie_B,0,2013,925,fixtures=1 events=924 players=0
+3,326,league_season,N1,Netherlands_Eredivisie,0,2013,613,fixtures=1 events=612 players=0
+3,327,league_season,P1,Portugal_Liga_I,0,2013,481,fixtures=1 events=480 players=0
+3,328,league_season,SC0,Scotland_Premier_League,0,2013,457,fixtures=1 events=456 players=0
+3,329,league_season,SC1,Scotland_Division_1,0,2013,361,fixtures=1 events=360 players=0
+3,330,league_season,SC2,Scotland_Division_2,0,2013,361,fixtures=1 events=360 players=0
+3,331,league_season,SC3,Scotland_Division_3,0,2013,361,fixtures=1 events=360 players=0
+3,332,league_season,SP1,Spain_La_Liga,0,2013,761,fixtures=1 events=760 players=0
+3,333,league_season,SP2,Spain_La_Liga_2,0,2013,925,fixtures=1 events=924 players=0
+3,334,league_season,T1,Turkey_Ligi_1,0,2013,613,fixtures=1 events=612 players=0
+3,335,league_season,B1,Belgium_Jupiler_League,0,2012,481,fixtures=1 events=480 players=0
+3,336,league_season,D1,Germany_Bundesliga_1,0,2012,613,fixtures=1 events=612 players=0
+3,337,league_season,D2,Germany_Bundesliga_2,0,2012,613,fixtures=1 events=612 players=0
+3,338,league_season,E0,England_Premier_League,0,2012,761,fixtures=1 events=760 players=0
+3,339,league_season_part_1,E1,England_Championship,0,2012,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,340,league_season_part_2,E1,England_Championship,0,2012,105,fixtures=1 events=1104 players=0 | chunk=2
+3,341,league_season_part_1,E2,England_League_1,0,2012,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,342,league_season_part_2,E2,England_League_1,0,2012,105,fixtures=1 events=1104 players=0 | chunk=2
+3,343,league_season_part_1,E3,England_League_2,0,2012,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,344,league_season_part_2,E3,England_League_2,0,2012,105,fixtures=1 events=1104 players=0 | chunk=2
+3,345,league_season_part_1,EC,England_Conference,0,2012,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,346,league_season_part_2,EC,England_Conference,0,2012,105,fixtures=1 events=1104 players=0 | chunk=2
+3,347,league_season,F1,France_Le_Championnat,0,2012,761,fixtures=1 events=760 players=0
+3,348,league_season,F2,France_Division_2,0,2012,761,fixtures=1 events=760 players=0
+3,349,league_season,G1,Greece_Ethniki_Katigoria,0,2012,481,fixtures=1 events=480 players=0
+3,350,league_season,I1,Italy_Serie_A,0,2012,761,fixtures=1 events=760 players=0
+3,351,league_season,I2,Italy_Serie_B,0,2012,925,fixtures=1 events=924 players=0
+3,352,league_season,N1,Netherlands_Eredivisie,0,2012,613,fixtures=1 events=612 players=0
+3,353,league_season,P1,Portugal_Liga_I,0,2012,481,fixtures=1 events=480 players=0
+3,354,league_season,SC0,Scotland_Premier_League,0,2012,457,fixtures=1 events=456 players=0
+3,355,league_season,SC1,Scotland_Division_1,0,2012,361,fixtures=1 events=360 players=0
+3,356,league_season,SC2,Scotland_Division_2,0,2012,361,fixtures=1 events=360 players=0
+3,357,league_season,SC3,Scotland_Division_3,0,2012,361,fixtures=1 events=360 players=0
+3,358,league_season,SP1,Spain_La_Liga,0,2012,761,fixtures=1 events=760 players=0
+3,359,league_season,SP2,Spain_La_Liga_2,0,2012,925,fixtures=1 events=924 players=0
+3,360,league_season,T1,Turkey_Ligi_1,0,2012,613,fixtures=1 events=612 players=0
+3,361,league_season,B1,Belgium_Jupiler_League,0,2011,481,fixtures=1 events=480 players=0
+3,362,league_season,D1,Germany_Bundesliga_1,0,2011,613,fixtures=1 events=612 players=0
+3,363,league_season,D2,Germany_Bundesliga_2,0,2011,613,fixtures=1 events=612 players=0
+3,364,league_season,E0,England_Premier_League,0,2011,761,fixtures=1 events=760 players=0
+3,365,league_season_part_1,E1,England_Championship,0,2011,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,366,league_season_part_2,E1,England_Championship,0,2011,105,fixtures=1 events=1104 players=0 | chunk=2
+3,367,league_season_part_1,E2,England_League_1,0,2011,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,368,league_season_part_2,E2,England_League_1,0,2011,105,fixtures=1 events=1104 players=0 | chunk=2
+3,369,league_season_part_1,E3,England_League_2,0,2011,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,370,league_season_part_2,E3,England_League_2,0,2011,105,fixtures=1 events=1104 players=0 | chunk=2
+3,371,league_season_part_1,EC,England_Conference,0,2011,1000,fixtures=1 events=1104 players=0 | chunk=1
+3,372,league_season_part_2,EC,England_Conference,0,2011,105,fixtures=1 events=1104 players=0 | chunk=2
+3,373,league_season,F1,France_Le_Championnat,0,2011,761,fixtures=1 events=760 players=0
+3,374,league_season,F2,France_Division_2,0,2011,761,fixtures=1 events=760 players=0
+3,375,league_season,G1,Greece_Ethniki_Katigoria,0,2011,481,fixtures=1 events=480 players=0
+3,376,league_season,I1,Italy_Serie_A,0,2011,761,fixtures=1 events=760 players=0
+4,377,league_season,I2,Italy_Serie_B,0,2011,925,fixtures=1 events=924 players=0
+4,378,league_season,N1,Netherlands_Eredivisie,0,2011,613,fixtures=1 events=612 players=0
+4,379,league_season,P1,Portugal_Liga_I,0,2011,481,fixtures=1 events=480 players=0
+4,380,league_season,SC0,Scotland_Premier_League,0,2011,457,fixtures=1 events=456 players=0
+4,381,league_season,SC1,Scotland_Division_1,0,2011,361,fixtures=1 events=360 players=0
+4,382,league_season,SC2,Scotland_Division_2,0,2011,361,fixtures=1 events=360 players=0
+4,383,league_season,SC3,Scotland_Division_3,0,2011,361,fixtures=1 events=360 players=0
+4,384,league_season,SP1,Spain_La_Liga,0,2011,761,fixtures=1 events=760 players=0
+4,385,league_season,SP2,Spain_La_Liga_2,0,2011,925,fixtures=1 events=924 players=0
+4,386,league_season,T1,Turkey_Ligi_1,0,2011,613,fixtures=1 events=612 players=0
+4,387,league_season,B1,Belgium_Jupiler_League,0,2010,481,fixtures=1 events=480 players=0
+4,388,league_season,D1,Germany_Bundesliga_1,0,2010,613,fixtures=1 events=612 players=0
+4,389,league_season,D2,Germany_Bundesliga_2,0,2010,613,fixtures=1 events=612 players=0
+4,390,league_season,E0,England_Premier_League,0,2010,761,fixtures=1 events=760 players=0
+4,391,league_season_part_1,E1,England_Championship,0,2010,1000,fixtures=1 events=1104 players=0 | chunk=1
+4,392,league_season_part_2,E1,England_Championship,0,2010,105,fixtures=1 events=1104 players=0 | chunk=2
+4,393,league_season_part_1,E2,England_League_1,0,2010,1000,fixtures=1 events=1104 players=0 | chunk=1
+4,394,league_season_part_2,E2,England_League_1,0,2010,105,fixtures=1 events=1104 players=0 | chunk=2
+4,395,league_season_part_1,E3,England_League_2,0,2010,1000,fixtures=1 events=1104 players=0 | chunk=1
+4,396,league_season_part_2,E3,England_League_2,0,2010,105,fixtures=1 events=1104 players=0 | chunk=2
+4,397,league_season_part_1,EC,England_Conference,0,2010,1000,fixtures=1 events=1104 players=0 | chunk=1
+4,398,league_season_part_2,EC,England_Conference,0,2010,105,fixtures=1 events=1104 players=0 | chunk=2
+4,399,league_season,F1,France_Le_Championnat,0,2010,761,fixtures=1 events=760 players=0
+4,400,league_season,F2,France_Division_2,0,2010,761,fixtures=1 events=760 players=0
+4,401,league_season,G1,Greece_Ethniki_Katigoria,0,2010,481,fixtures=1 events=480 players=0
+4,402,league_season,I1,Italy_Serie_A,0,2010,761,fixtures=1 events=760 players=0
+4,403,league_season,I2,Italy_Serie_B,0,2010,925,fixtures=1 events=924 players=0
+4,404,league_season,N1,Netherlands_Eredivisie,0,2010,613,fixtures=1 events=612 players=0
+4,405,league_season,P1,Portugal_Liga_I,0,2010,481,fixtures=1 events=480 players=0
+4,406,league_season,SC0,Scotland_Premier_League,0,2010,457,fixtures=1 events=456 players=0
+4,407,league_season,SC1,Scotland_Division_1,0,2010,361,fixtures=1 events=360 players=0
+4,408,league_season,SC2,Scotland_Division_2,0,2010,361,fixtures=1 events=360 players=0
+4,409,league_season,SC3,Scotland_Division_3,0,2010,361,fixtures=1 events=360 players=0
+4,410,league_season,SP1,Spain_La_Liga,0,2010,761,fixtures=1 events=760 players=0
+4,411,league_season,SP2,Spain_La_Liga_2,0,2010,925,fixtures=1 events=924 players=0
+4,412,league_season,T1,Turkey_Ligi_1,0,2010,613,fixtures=1 events=612 players=0
+4,413,league_season,B1,Belgium_Jupiler_League,0,2009,421,fixtures=1 events=420 players=0
+4,414,league_season,D1,Germany_Bundesliga_1,0,2009,613,fixtures=1 events=612 players=0
+4,415,league_season,D2,Germany_Bundesliga_2,0,2009,613,fixtures=1 events=612 players=0
+4,416,league_season,E0,England_Premier_League,0,2009,761,fixtures=1 events=760 players=0
+4,417,league_season_part_1,E1,England_Championship,0,2009,1000,fixtures=1 events=1104 players=0 | chunk=1
+4,418,league_season_part_2,E1,England_Championship,0,2009,105,fixtures=1 events=1104 players=0 | chunk=2
+4,419,league_season_part_1,E2,England_League_1,0,2009,1000,fixtures=1 events=1104 players=0 | chunk=1
+4,420,league_season_part_2,E2,England_League_1,0,2009,105,fixtures=1 events=1104 players=0 | chunk=2
+4,421,league_season_part_1,E3,England_League_2,0,2009,1000,fixtures=1 events=1104 players=0 | chunk=1
+4,422,league_season_part_2,E3,England_League_2,0,2009,105,fixtures=1 events=1104 players=0 | chunk=2
+4,423,league_season_part_1,EC,England_Conference,0,2009,1000,fixtures=1 events=1012 players=0 | chunk=1
+4,424,league_season_part_2,EC,England_Conference,0,2009,13,fixtures=1 events=1012 players=0 | chunk=2
+4,425,league_season,F1,France_Le_Championnat,0,2009,761,fixtures=1 events=760 players=0
+4,426,league_season,F2,France_Division_2,0,2009,761,fixtures=1 events=760 players=0
+4,427,league_season,G1,Greece_Ethniki_Katigoria,0,2009,481,fixtures=1 events=480 players=0
+4,428,league_season,I1,Italy_Serie_A,0,2009,761,fixtures=1 events=760 players=0
+4,429,league_season,I2,Italy_Serie_B,0,2009,925,fixtures=1 events=924 players=0
+4,430,league_season,N1,Netherlands_Eredivisie,0,2009,613,fixtures=1 events=612 players=0
+4,431,league_season,P1,Portugal_Liga_I,0,2009,481,fixtures=1 events=480 players=0
+4,432,league_season,SC0,Scotland_Premier_League,0,2009,457,fixtures=1 events=456 players=0
+4,433,league_season,SC1,Scotland_Division_1,0,2009,361,fixtures=1 events=360 players=0
+4,434,league_season,SC2,Scotland_Division_2,0,2009,361,fixtures=1 events=360 players=0
+4,435,league_season,SC3,Scotland_Division_3,0,2009,361,fixtures=1 events=360 players=0
+4,436,league_season,SP1,Spain_La_Liga,0,2009,761,fixtures=1 events=760 players=0
+4,437,league_season,SP2,Spain_La_Liga_2,0,2009,925,fixtures=1 events=924 players=0
+4,438,league_season,T1,Turkey_Ligi_1,0,2009,545,fixtures=1 events=544 players=0
+4,439,league_season,B1,Belgium_Jupiler_League,0,2008,613,fixtures=1 events=612 players=0
+4,440,league_season,D1,Germany_Bundesliga_1,0,2008,613,fixtures=1 events=612 players=0
+4,441,league_season,D2,Germany_Bundesliga_2,0,2008,613,fixtures=1 events=612 players=0
+4,442,league_season,E0,England_Premier_League,0,2008,761,fixtures=1 events=760 players=0
+4,443,league_season_part_1,E1,England_Championship,0,2008,1000,fixtures=1 events=1104 players=0 | chunk=1
+4,444,league_season_part_2,E1,England_Championship,0,2008,105,fixtures=1 events=1104 players=0 | chunk=2
+4,445,league_season_part_1,E2,England_League_1,0,2008,1000,fixtures=1 events=1104 players=0 | chunk=1
+4,446,league_season_part_2,E2,England_League_1,0,2008,105,fixtures=1 events=1104 players=0 | chunk=2
+4,447,league_season_part_1,E3,England_League_2,0,2008,1000,fixtures=1 events=1104 players=0 | chunk=1
+4,448,league_season_part_2,E3,England_League_2,0,2008,105,fixtures=1 events=1104 players=0 | chunk=2
+4,449,league_season_part_1,EC,England_Conference,0,2008,1000,fixtures=1 events=1104 players=0 | chunk=1
+4,450,league_season_part_2,EC,England_Conference,0,2008,105,fixtures=1 events=1104 players=0 | chunk=2
+4,451,league_season,F1,France_Le_Championnat,0,2008,761,fixtures=1 events=760 players=0
+4,452,league_season,F2,France_Division_2,0,2008,761,fixtures=1 events=760 players=0
+4,453,league_season,G1,Greece_Ethniki_Katigoria,0,2008,481,fixtures=1 events=480 players=0
+4,454,league_season,I1,Italy_Serie_A,0,2008,761,fixtures=1 events=760 players=0
+4,455,league_season,I2,Italy_Serie_B,0,2008,925,fixtures=1 events=924 players=0
+4,456,league_season,N1,Netherlands_Eredivisie,0,2008,613,fixtures=1 events=612 players=0
+4,457,league_season,P1,Portugal_Liga_I,0,2008,481,fixtures=1 events=480 players=0
+4,458,league_season,SC0,Scotland_Premier_League,0,2008,457,fixtures=1 events=456 players=0
+4,459,league_season,SC1,Scotland_Division_1,0,2008,361,fixtures=1 events=360 players=0
+4,460,league_season,SC2,Scotland_Division_2,0,2008,361,fixtures=1 events=360 players=0
+4,461,league_season,SC3,Scotland_Division_3,0,2008,361,fixtures=1 events=360 players=0
+4,462,league_season,SP1,Spain_La_Liga,0,2008,761,fixtures=1 events=760 players=0
+4,463,league_season,SP2,Spain_La_Liga_2,0,2008,925,fixtures=1 events=924 players=0
+4,464,league_season,T1,Turkey_Ligi_1,0,2008,613,fixtures=1 events=612 players=0

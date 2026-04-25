@@ -1,0 +1,10 @@
+# BEGIN DATA-ANALYSIS-AUTO
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+
+*/5 * * * * flock -n /tmp/football_worker.lock bash -lc '/home/lpanzieri/Data-Analysis/scripts/maintenance/worker_run_next_task.sh >> /home/lpanzieri/Data-Analysis/logs/worker_$(date +\%F).log 2>&1'
+*/30 * * * * bash -lc 'source /home/lpanzieri/Data-Analysis/.cron.env; /home/lpanzieri/Data-Analysis/.conda/bin/python /home/lpanzieri/Data-Analysis/scripts/maintenance/backfill_progress_tracker.py --host ${MYSQL_HOST:-127.0.0.1} --port ${MYSQL_PORT:-3306} --user ${MYSQL_USER:-football_admin} --database ${MYSQL_DATABASE:-historic_football_data} status >> /home/lpanzieri/Data-Analysis/logs/status_$(date +\%F).log 2>&1'
+15 * * * * bash -lc 'source /home/lpanzieri/Data-Analysis/.cron.env; /home/lpanzieri/Data-Analysis/.conda/bin/python /home/lpanzieri/Data-Analysis/scripts/maintenance/summarize_orchestrator_health.py --host ${MYSQL_HOST:-127.0.0.1} --port ${MYSQL_PORT:-3306} --user ${MYSQL_USER:-football_admin} --database ${MYSQL_DATABASE:-historic_football_data} --date $(date +\%F) >> /home/lpanzieri/Data-Analysis/logs/orchestrator_health_$(date +\%F).log 2>&1'
+20 3 * * * flock -n /tmp/db_backup.lock bash -lc 'source /home/lpanzieri/Data-Analysis/.cron.env; /home/lpanzieri/Data-Analysis/scripts/maintenance/backup_db_to_smb.sh >> /home/lpanzieri/Data-Analysis/logs/db_backup_$(date +\%F).log 2>&1'
+# END DATA-ANALYSIS-AUTO

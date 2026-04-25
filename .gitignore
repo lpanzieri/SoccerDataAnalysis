@@ -1,0 +1,13 @@
+logs/
+benchmarks/
+__pycache__/
+*.pyc
+.cron.env
+generated_graphs/
+developing_stage_credentials.txt
+scripts/maintenance/backup-share.cred
+scripts/helpers/generated/*.py
+!scripts/helpers/generated/__init__.py
+scripts/helpers/helper_registry.json
+scripts/helpers/unknown_questions.log
+scripts/maintenance/*.last.log
