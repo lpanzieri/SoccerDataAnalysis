@@ -416,8 +416,8 @@ def maybe_capture_player_identity(
 
     pid = int(player_id)
     pname = str(player_name)
-    upsert_player_alias(conn, pid, pname, source_table)
     upsert_player_dim(conn, pid, pname)
+    upsert_player_alias(conn, pid, pname, source_table)
 
     if team_id is not None:
         upsert_player_team_history(conn, int(player_id), int(team_id), observed_at)
@@ -628,8 +628,8 @@ def get_recent_season_years(
     if season_count <= 0:
         raise RuntimeError("season_count must be positive")
 
-    # Anchor rolling window to today's year so season_count always means
-    # "now back N seasons" even if older data was previously synced.
+    # Default fallback anchor is today's year; API current-season metadata
+    # will override this when available.
     current_year = dt.datetime.now(dt.UTC).year
     api_current_year: Optional[int] = None
     if calls_left > 0:
@@ -650,9 +650,9 @@ def get_recent_season_years(
                         api_current_year = int(s.get("year"))
                         break
 
-    # Prefer whichever anchor is newer between API current-season metadata and today's year.
+    # Prefer API current-season metadata for football season semantics.
     if api_current_year is not None:
-        current_year = max(current_year, api_current_year)
+        current_year = api_current_year
 
     target = [current_year - i for i in range(season_count)]
     return target, calls_left

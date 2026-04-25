@@ -161,3 +161,11 @@ Generated badge-based SVG examples:
 - Run a full health snapshot after the first upgraded-plan day and compare the blocked-reason mix.
 - Keep stale-task recovery enabled and tune `STALE_IN_PROGRESS_MINUTES` if needed.
 - Build an API layer for frontend integration if this moves beyond personal-use operations.
+
+## 12) Handoff Docs
+- Start here for any future agent session:
+  [docs/NEXT_AGENT_START_HERE.md](/home/lpanzieri/Data-Analysis/docs/NEXT_AGENT_START_HERE.md)
+- Windows restart handoff for current API-Football ingestion work:
+  [docs/WINDOWS_AGENT_HANDOFF_20260425.md](/home/lpanzieri/Data-Analysis/docs/WINDOWS_AGENT_HANDOFF_20260425.md)
+- Linux restart handoff for current API-Football ingestion work:
+  [docs/LINUX_AGENT_HANDOFF_20260425.md](/home/lpanzieri/Data-Analysis/docs/LINUX_AGENT_HANDOFF_20260425.md)

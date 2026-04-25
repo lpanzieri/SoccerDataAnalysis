@@ -50,6 +50,9 @@ This document provides a step-by-step workflow and best practices to efficiently
 - **For all `graphical_*` intents, return a consistent top-level response envelope:**
   - `intent`, `image`, `base64_image`, and `meta`.
   - Keep detailed payload in `meta` (`image_path`, labels, series, badge resolution info).
+- **Export graphical outputs in 4K by default.**
+  - Prefer a 3840px-wide export baseline (for example 16 inches at 240 DPI).
+  - Downscaling is acceptable; upscaling should be avoided.
 - **Do not rely on list-only cache payloads for graphical responses.**
   - Handle both dict and list cache shapes defensively.
 
@@ -67,6 +70,7 @@ This document provides a step-by-step workflow and best practices to efficiently
 - **Support multiple badge schemas.**
   - If `team.badge_path` exists, allow file-path badge loading.
   - If not, fallback to `team_badge.badge_image` blob loading.
+  - For chart scripts that render directly from event/provider IDs, add a live API fallback path for missing `team_badge` rows and persist newly fetched badges back into `team_badge`.
 - **Do not assume league IDs are in the same namespace across tables.**
   - Local `league.league_id` may differ from provider IDs in `team_badge.league_id`.
   - Rank badge matches by: local league_id match, then normalized `league_name` match, then latest season/update.
@@ -93,6 +97,8 @@ This document provides a step-by-step workflow and best practices to efficiently
   - `image == True` and `base64_image == True`
   - `meta.image_path` exists
   - `meta.team_badges` is populated (for badge-based charts)
+- **For graphical outputs, verify export quality:**
+  - Output should be 4K-class by default (target 3840px width unless the chart requires larger height).
 - **For any report with team names, verify badge completeness:**
   - Every displayed team label has a resolved badge (image render or explicit fallback metadata).
   - Badge appears visually next to team label (or documented client limitation is returned in metadata).
@@ -124,6 +130,16 @@ This document provides a step-by-step workflow and best practices to efficiently
 ## 5. LLM Agent Guidelines
 
 - **Always validate JSON before using it.**
+- **Default data-source policy: unless the user explicitly asks for local-only analysis, verify local data freshness against API data before answering.**
+  - If local data is behind, run or propose the minimal sync needed before producing final results.
+  - If the user explicitly says local-only, do not call the API and clearly label results as local-data-only.
+- **For website-hosted frontends, prefer an HTTP backend wrapper over direct script execution from clients.**
+  - Expose stable JSON endpoints and keep DB/API credentials server-side only.
+  - External agents should integrate through API contracts, not direct shell access.
+  - Require bearer-token authentication and enable rate limiting before internet exposure.
+- **Before writing one-off logic, evaluate whether the task is recurrent and should become a reusable helper Python function.**
+  - Prefer adding/expanding helper functions in `scripts/helpers/` (or another stable module) when the same operation is likely to be repeated.
+  - Keep helper signatures explicit and return structured payloads that are easy to test and reuse.
 - **When patching code, ensure type robustness (never assume output type).**
 - **After any change, run a full end-to-end test with a real question.**
 - **If a new error appears, document the fix in a troubleshooting section.**

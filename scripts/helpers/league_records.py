@@ -13,6 +13,10 @@ import mysql.connector
 
 matplotlib.use("Agg")  # For headless environments
 
+EXPORT_WIDTH_INCHES = 16.0
+EXPORT_HEIGHT_INCHES = 9.0
+EXPORT_DPI = 240
+
 
 def plot_goals_comparison(
   db: DBConfig,
@@ -145,7 +149,7 @@ def plot_goals_comparison(
         row = cur.fetchone()
         team_goals[name].append(row["goals"] if row and row["goals"] is not None else 0)
 
-    plt.figure(figsize=(12, 7))
+    plt.figure(figsize=(EXPORT_WIDTH_INCHES, EXPORT_HEIGHT_INCHES))
     lines = {}
     for name in team_names:
       (line,) = plt.plot(season_labels, team_goals[name], marker="o", label=name)
@@ -198,10 +202,10 @@ def plot_goals_comparison(
 
     filename = f"goals_comparison_{'_'.join([n.lower() for n in team_names])}_{start_year}_{this_year}.png"
     image_path = os.path.join(image_dir, filename)
-    plt.savefig(image_path)
+    plt.savefig(image_path, dpi=EXPORT_DPI)
 
     buf = BytesIO()
-    plt.savefig(buf, format="png")
+    plt.savefig(buf, format="png", dpi=EXPORT_DPI)
     buf.seek(0)
     base64_image = base64.b64encode(buf.read()).decode("utf-8")
     plt.close()

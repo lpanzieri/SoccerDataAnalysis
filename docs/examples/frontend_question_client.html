@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent API Frontend Example</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; max-width: 960px; }
+    label, input, textarea, button { display: block; width: 100%; margin-top: 0.5rem; }
+    textarea { min-height: 110px; }
+    pre { background: #f4f4f4; padding: 1rem; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Question Client Example</h1>
+  <p>This example posts a question to /v1/question and renders the JSON response.</p>
+
+  <label for="endpoint">API Endpoint</label>
+  <input id="endpoint" value="http://127.0.0.1:8081/v1/question">
+
+  <label for="token">Bearer Token</label>
+  <input id="token" placeholder="AGENT_API_TOKEN value">
+
+  <label for="question">Question</label>
+  <textarea id="question">Who is the Serie A top scorer this season?</textarea>
+
+  <label><input id="localOnly" type="checkbox"> Local data only</label>
+
+  <button id="sendBtn" type="button">Send Question</button>
+
+  <h2>Response</h2>
+  <pre id="result">(no response yet)</pre>
+
+  <script>
+    async function sendQuestion() {
+      const endpoint = document.getElementById('endpoint').value.trim();
+      const token = document.getElementById('token').value.trim();
+      const question = document.getElementById('question').value.trim();
+      const localOnly = document.getElementById('localOnly').checked;
+      const resultEl = document.getElementById('result');
+
+      if (!endpoint || !question) {
+        resultEl.textContent = 'Endpoint and question are required.';
+        return;
+      }
+
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      resultEl.textContent = 'Loading...';
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            question,
+            local_only: localOnly,
+            freshness_days_back: 3,
+            no_cache: false,
+          }),
+        });
+
+        const payload = await response.json();
+        resultEl.textContent = JSON.stringify(
+          {
+            http_status: response.status,
+            retry_after: response.headers.get('Retry-After'),
+            payload,
+          },
+          null,
+          2,
+        );
+      } catch (err) {
+        resultEl.textContent = `Request failed: ${err}`;
+      }
+    }
+
+    document.getElementById('sendBtn').addEventListener('click', sendQuestion);
+  </script>
+</body>
+</html>
