@@ -36,6 +36,34 @@ Initial interpretation:
 - This aligns with known hot-path overhead in `dynamic_helper_manager.py` (per-request cache ensure/prune/freshness checks and potential inline refresh logic).
 - Priority remains Tasks 7, 8, 9 to make caching beneficial.
 
+## Execution Log
+
+### Task 8 - Lightweight cache freshness strategy
+
+- Branch: `opt/task-8-light-freshness`
+- Status: complete
+- Report file: `benchmarks/helper_benchmark_20260425_171237.json`
+- Validation mode: cache enabled, 10 runs, 2 warmups, DB user `root`
+- Result:
+  - `p50`: 51.26 ms
+  - `p95`: 52.37 ms
+  - avg DB execute calls/run: 6
+  - cache hit rate: 1.0
+- Delta vs prior cache-on baseline:
+  - `p50`: 714.41 ms -> 51.26 ms
+  - `p95`: 741.79 ms -> 52.37 ms
+  - avg DB execute calls/run: 57 -> 6
+- Regression checks passed:
+  - `intent == graphical_goals_comparison`
+  - `image == True` on cache hits
+  - `base64_image == True` on cache hits
+  - `meta.image_path` present on cache hits
+- Notes:
+  - Removed per-request `MAX(match_date)` DB freshness query from cache-hit path.
+  - Freshness now uses cached `latest_data_timestamp` within a configurable window.
+  - `latest_data_timestamp` falls back to cache-write time when helper rows do not expose date fields.
+  - Tuning env var: `HELPER_CACHE_FRESHNESS_SECONDS`.
+
 ## Week Plan
 
 ### Day 1 - Baseline + Quick Wins (Helpers)
@@ -93,6 +121,7 @@ Initial interpretation:
 - Target file: `scripts/helpers/dynamic_helper_manager.py`
 - Effort: 3-5 hours
 - Risk: Medium
+- Status: Done on `opt/task-8-light-freshness`
 
 9. Decouple API refresh from synchronous request path (stale-mark + async refresh trigger).
 - Target files: `scripts/helpers/dynamic_helper_manager.py`, maintenance worker path if needed
@@ -148,8 +177,8 @@ Initial interpretation:
 - If p95 worsens or output contract breaks, revert that task only.
 
 ## Tracking Template
-- [ ] Task ID
-- [ ] Code complete
-- [ ] Benchmark delta recorded
-- [ ] Regression checks passed
-- [ ] Docs updated
+- [x] Task 8
+- [x] Code complete
+- [x] Benchmark delta recorded
+- [x] Regression checks passed
+- [x] Docs updated

@@ -112,6 +112,9 @@ This document provides a step-by-step workflow and best practices to efficiently
 - **If the cache is not updated or used:**
   - Check the cache key logic and table schema.
   - Ensure `latest_data_timestamp` is extracted correctly.
+  - Freshness checks should rely on cached `latest_data_timestamp` and a configurable window, not per-request `MAX(match_date)` DB probes.
+  - Tune freshness behavior with `HELPER_CACHE_FRESHNESS_SECONDS`.
+  - If date fields are absent in helper rows, ensure cache write time is used as fallback freshness timestamp.
 - **If badges are null/missing:**
   - Inspect DB schema (`team` vs `team_badge`).
   - Verify league ID namespace mismatch and enable `league_name` fallback.
