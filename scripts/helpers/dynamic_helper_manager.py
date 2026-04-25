@@ -2,58 +2,68 @@
 from __future__ import annotations
 
 def fetch_and_insert_missing_data_from_api(db: DBConfig, league_code: str, from_date: str, to_date: str) -> None:
-    """
-    Fetch missing matches/events from the API for the given league and date range, and insert into the DB.
-    Uses sync_fixtures from sync_api_football_events.py and API-Football.
+    """Invoke sync_api_football_events.py as a subprocess to refresh data for a
+    given league/date range.  Uses the LEAGUE_CODE_TO_PROVIDER_ID mapping so
+    the Bet365-style league code is translated to the API-Football league_id
+    that the sync script expects.
     """
     import os
-    import mysql.connector
-    from datetime import datetime
-    from sync_api_football_events import sync_fixtures
+    import subprocess
+    import sys
+    from pathlib import Path
+    from scripts.helpers.league_records import LEAGUE_CODE_TO_PROVIDER_ID
 
     api_key = os.getenv("APIFOOTBALL_KEY", "")
     if not api_key:
         print("[API BRIDGE] APIFOOTBALL_KEY missing, skipping API fetch.")
         return
 
-    # Find league_id and all relevant season_years for the date range
-    conn = mysql.connector.connect(
-        host=db.host,
-        port=db.port,
-        user=db.user,
-        password=db.password,
-        database=db.database,
-        charset="utf8mb4",
-        use_unicode=True,
-        use_pure=True,
-        autocommit=False,
-    )
-    cur = conn.cursor()
-    try:
-        # Get league_id from league_code
-        cur.execute("SELECT league_id FROM league WHERE league_code = %s", (league_code,))
-        row = cur.fetchone()
-        if not row:
-            print(f"[API BRIDGE] League code {league_code} not found in DB.")
-            return
-        league_id = row[0]
+    provider_id = LEAGUE_CODE_TO_PROVIDER_ID.get(league_code)
+    if provider_id is None:
+        print(f"[API BRIDGE] No provider_id mapping for league_code={league_code!r}, skipping.")
+        return
 
-        # Get all season_years in the date range
-        cur.execute("SELECT DISTINCT start_year FROM season WHERE start_year >= %s AND start_year <= %s ORDER BY start_year", (from_date[:4], to_date[:4]))
-        season_years = [r[0] for r in cur.fetchall()]
-        if not season_years:
-            print(f"[API BRIDGE] No seasons found for years {from_date[:4]} to {to_date[:4]}.")
-            return
+    from_year = int(from_date[:4])
+    to_year   = int(to_date[:4])
+    season_years = list(range(from_year, to_year + 1))
+    if not season_years:
+        print(f"[API BRIDGE] Empty year range {from_year}-{to_year}, skipping.")
+        return
 
-        # For each season, call sync_fixtures
-        for season_year in season_years:
-            print(f"[API BRIDGE] Syncing fixtures for league_id={league_id}, season_year={season_year}")
-            # Use a reasonable call budget and sleep
-            sync_fixtures(conn, api_key, league_id, season_year, calls_left=10, sleep_seconds=1.5)
-            conn.commit()
-    finally:
-        cur.close()
-        conn.close()
+    sync_script = Path(__file__).resolve().parents[2] / "sync_api_football_events.py"
+    if not sync_script.is_file():
+        print(f"[API BRIDGE] sync script not found at {sync_script}, skipping.")
+        return
+
+    for season_year in season_years:
+        print(f"[API BRIDGE] Syncing league_id={provider_id} season={season_year}")
+        cmd = [
+            sys.executable, str(sync_script),
+            "--league-id",   str(provider_id),
+            "--season-year", str(season_year),
+            "--daily-limit", str(os.getenv("APIFOOTBALL_DAILY_LIMIT", "75000")),
+            "--reserve",     "500",
+            "--max-event-calls", "200",
+            "--max-stats-calls", "0",
+            "--max-lineup-calls", "0",
+            "--max-player-stats-calls", "0",
+            "--max-full-event-backfill-calls", "0",
+            "--sleep-seconds", "0",
+            "--skip-stats-sync",
+            "--skip-lineups-sync",
+        ]
+        try:
+            subprocess.run(cmd, check=True, timeout=120)
+        except subprocess.CalledProcessError as exc:
+            print(f"[API BRIDGE] sync failed for league={provider_id} season={season_year}: {exc}")
+        except subprocess.TimeoutExpired:
+            print(f"[API BRIDGE] sync timed out for league={provider_id} season={season_year}")
+ss.run(cmd, check=True, timeout=120)
+        except subprocess.CalledProcessError as exc:
+            print(f"[API BRIDGE] sync failed for league={provider_id} season={season_year}: {exc}")
+        except subprocess.TimeoutExpired:
+            print(f"[API BRIDGE] sync timed out for league={provider_id} season={season_year}")
+
 #!/usr/bin/env python3
 """Dynamic helper management for NL football questions.
 
@@ -786,9 +796,12 @@ def answer_question_with_helpers(
 
             # Query the DB for the latest match date for this intent/league
             def get_latest_db_match_date(db, league_code=None):
+                from scripts.helpers.league_records import LEAGUE_CODE_TO_PROVIDER_ID
                 conn = _connect_db(db)
                 cur = conn.cursor()
                 try:
+                    candidates = []
+                    # Legacy match_game table
                     if league_code:
                         cur.execute(
                             "SELECT MAX(match_date) FROM match_game m JOIN league l ON l.league_id = m.league_id WHERE l.league_code = %s",
@@ -797,7 +810,23 @@ def answer_question_with_helpers(
                     else:
                         cur.execute("SELECT MAX(match_date) FROM match_game")
                     row = cur.fetchone()
-                    return row[0].strftime("%Y-%m-%d") if row and row[0] else None
+                    if row and row[0]:
+                        candidates.append(row[0].strftime("%Y-%m-%d"))
+                    # event_fixture table (API-Football pipeline)
+                    provider_id = LEAGUE_CODE_TO_PROVIDER_ID.get(league_code) if league_code else None
+                    if provider_id:
+                        cur.execute(
+                            "SELECT MAX(match_date) FROM event_fixture WHERE league_id = %s AND status_short IN ('FT','AET','PEN','FT_PEN','AWD','WO')",
+                            (provider_id,)
+                        )
+                    else:
+                        cur.execute(
+                            "SELECT MAX(match_date) FROM event_fixture WHERE status_short IN ('FT','AET','PEN','FT_PEN','AWD','WO')"
+                        )
+                    row = cur.fetchone()
+                    if row and row[0]:
+                        candidates.append(row[0].strftime("%Y-%m-%d") if hasattr(row[0], "strftime") else str(row[0])[:10])
+                    return max(candidates) if candidates else None
                 finally:
                     cur.close()
                     conn.close()

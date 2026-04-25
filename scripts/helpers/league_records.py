@@ -17,6 +17,24 @@ EXPORT_WIDTH_INCHES = 16.0
 EXPORT_HEIGHT_INCHES = 9.0
 EXPORT_DPI = 240
 
+# Mapping from Bet365-style league codes to API-Football provider league IDs.
+# These are the IDs used in event_fixture, player_match_stats, event_goal, etc.
+LEAGUE_CODE_TO_PROVIDER_ID: Dict[str, int] = {
+    "E0": 39,    # Premier League
+    "I1": 135,   # Serie A
+    "SP1": 140,  # La Liga
+    "D1": 78,    # Bundesliga
+    "F1": 61,    # Ligue 1
+    "N1": 88,    # Eredivisie
+}
+
+PROVIDER_ID_TO_LEAGUE_CODE: Dict[int, str] = {
+    v: k for k, v in LEAGUE_CODE_TO_PROVIDER_ID.items()
+}
+
+# Finished-match status codes used in event_fixture.status_short
+FINISHED_STATUSES = ("FT", "AET", "PEN", "FT_PEN", "AWD", "WO")
+
 
 def plot_goals_comparison(
   db: DBConfig,
@@ -790,3 +808,236 @@ def get_best_away_record(
 def get_premier_league_longest_title_streak(db: DBConfig) -> List[Dict[str, Any]]:
     """Convenience wrapper for Premier League (league_code='E0')."""
     return get_longest_title_streak(db=db, league_code="E0")
+
+
+# ---------------------------------------------------------------------------
+# event_fixture-backed helpers (use API-Football data synced by
+# sync_api_football_events.py: event_fixture, player_match_stats, event_goal)
+# ---------------------------------------------------------------------------
+
+def _ef_league_filter(league_code: Optional[str]) -> Tuple[str, Tuple[Any, ...]]:
+    """Return a WHERE fragment and params for filtering event_fixture by league_code."""
+    if league_code and league_code in LEAGUE_CODE_TO_PROVIDER_ID:
+        provider_id = LEAGUE_CODE_TO_PROVIDER_ID[league_code]
+        return "AND ef.league_id = %s", (provider_id,)
+    return "", ()
+
+
+def get_top_scorers(
+    db: DBConfig,
+    league_code: Optional[str] = None,
+    seasons_back: int = 3,
+    limit: int = 20,
+) -> List[Dict[str, Any]]:
+    """Return top goal scorers from player_match_stats across recent seasons.
+
+    Uses event_fixture + player_match_stats (API-Football data).
+
+    Args:
+        db: DB connection config.
+        league_code: Optional Bet365-style code (e.g. "I1", "E0"). None = all leagues.
+        seasons_back: How many recent completed seasons to include.
+        limit: Maximum rows to return.
+
+    Returns:
+        List of rows: player_name, total_goals, total_assists, matches_played,
+        goals_per_match, league_ids.
+    """
+    league_fragment, league_params = _ef_league_filter(league_code)
+
+    query = f"""
+        SELECT
+            pd.player_name,
+            SUM(pms.goals_scored)  AS total_goals,
+            SUM(pms.assists)       AS total_assists,
+            COUNT(DISTINCT ef.provider_fixture_id) AS matches_played,
+            ROUND(SUM(pms.goals_scored) /
+                  NULLIF(COUNT(DISTINCT ef.provider_fixture_id), 0), 2) AS goals_per_match,
+            GROUP_CONCAT(DISTINCT ef.league_id ORDER BY ef.league_id SEPARATOR ',') AS league_ids
+        FROM player_match_stats pms
+        JOIN event_fixture ef ON ef.provider_fixture_id = pms.provider_fixture_id
+        JOIN player_dim pd ON pd.provider_player_id = pms.provider_player_id
+        WHERE ef.status_short IN ('FT','AET','PEN','FT_PEN','AWD','WO')
+          AND ef.season_year >= YEAR(CURDATE()) - %s
+          AND pms.goals_scored > 0
+          {league_fragment}
+        GROUP BY pms.provider_player_id, pd.player_name
+        ORDER BY total_goals DESC
+        LIMIT %s
+    """
+
+    params = (seasons_back,) + league_params + (limit,)
+    conn = _connect(db)
+    cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute(query, params)
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_top_assisters(
+    db: DBConfig,
+    league_code: Optional[str] = None,
+    seasons_back: int = 3,
+    limit: int = 20,
+) -> List[Dict[str, Any]]:
+    """Return top assist providers from player_match_stats across recent seasons."""
+    league_fragment, league_params = _ef_league_filter(league_code)
+
+    query = f"""
+        SELECT
+            pd.player_name,
+            SUM(pms.assists)       AS total_assists,
+            SUM(pms.goals_scored)  AS total_goals,
+            COUNT(DISTINCT ef.provider_fixture_id) AS matches_played,
+            ROUND(SUM(pms.assists) /
+                  NULLIF(COUNT(DISTINCT ef.provider_fixture_id), 0), 2) AS assists_per_match
+        FROM player_match_stats pms
+        JOIN event_fixture ef ON ef.provider_fixture_id = pms.provider_fixture_id
+        JOIN player_dim pd ON pd.provider_player_id = pms.provider_player_id
+        WHERE ef.status_short IN ('FT','AET','PEN','FT_PEN','AWD','WO')
+          AND ef.season_year >= YEAR(CURDATE()) - %s
+          AND pms.assists > 0
+          {league_fragment}
+        GROUP BY pms.provider_player_id, pd.player_name
+        ORDER BY total_assists DESC
+        LIMIT %s
+    """
+
+    params = (seasons_back,) + league_params + (limit,)
+    conn = _connect(db)
+    cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute(query, params)
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_goals_per_match_leaders(
+    db: DBConfig,
+    league_code: Optional[str] = None,
+    seasons_back: int = 3,
+    min_matches: int = 10,
+    limit: int = 20,
+) -> List[Dict[str, Any]]:
+    """Return players with the best goals-per-match rate (min_matches threshold)."""
+    league_fragment, league_params = _ef_league_filter(league_code)
+
+    query = f"""
+        SELECT
+            pd.player_name,
+            SUM(pms.goals_scored)  AS total_goals,
+            COUNT(DISTINCT ef.provider_fixture_id) AS matches_played,
+            ROUND(SUM(pms.goals_scored) /
+                  NULLIF(COUNT(DISTINCT ef.provider_fixture_id), 0), 3) AS goals_per_match
+        FROM player_match_stats pms
+        JOIN event_fixture ef ON ef.provider_fixture_id = pms.provider_fixture_id
+        JOIN player_dim pd ON pd.provider_player_id = pms.provider_player_id
+        WHERE ef.status_short IN ('FT','AET','PEN','FT_PEN','AWD','WO')
+          AND ef.season_year >= YEAR(CURDATE()) - %s
+          {league_fragment}
+        GROUP BY pms.provider_player_id, pd.player_name
+        HAVING matches_played >= %s
+        ORDER BY goals_per_match DESC
+        LIMIT %s
+    """
+
+    params = (seasons_back,) + league_params + (min_matches, limit)
+    conn = _connect(db)
+    cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute(query, params)
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_goals_per_match_by_league(
+    db: DBConfig,
+    league_code: Optional[str] = None,
+    seasons_back: int = 3,
+) -> List[Dict[str, Any]]:
+    """Return average goals per match per league and season (from event_goal)."""
+    league_fragment, league_params = _ef_league_filter(league_code)
+
+    query = f"""
+        SELECT
+            ef.league_id,
+            ef.season_year,
+            COUNT(DISTINCT ef.provider_fixture_id) AS matches,
+            COUNT(eg.goal_id) AS total_goals,
+            ROUND(COUNT(eg.goal_id) /
+                  NULLIF(COUNT(DISTINCT ef.provider_fixture_id), 0), 2) AS goals_per_match
+        FROM event_fixture ef
+        LEFT JOIN event_goal eg
+            ON eg.provider_fixture_id = ef.provider_fixture_id
+            AND eg.event_type = 'Goal'
+            AND eg.event_detail != 'Own Goal'
+        WHERE ef.status_short IN ('FT','AET','PEN','FT_PEN','AWD','WO')
+          AND ef.season_year >= YEAR(CURDATE()) - %s
+          {league_fragment}
+        GROUP BY ef.league_id, ef.season_year
+        ORDER BY ef.league_id, ef.season_year
+    """
+
+    params = (seasons_back,) + league_params
+    conn = _connect(db)
+    cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute(query, params)
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_most_goals_in_season_ef(
+    db: DBConfig,
+    league_code: Optional[str] = None,
+    seasons_back: int = 10,
+) -> List[Dict[str, Any]]:
+    """Return the season with the highest total goals scored (from event_goal).
+
+    Uses event_fixture pipeline data instead of legacy match_game.
+    """
+    league_fragment, league_params = _ef_league_filter(league_code)
+
+    query = f"""
+        WITH season_totals AS (
+            SELECT
+                ef.league_id,
+                ef.season_year,
+                COUNT(eg.goal_id) AS total_goals,
+                COUNT(DISTINCT ef.provider_fixture_id) AS matches
+            FROM event_fixture ef
+            LEFT JOIN event_goal eg
+                ON eg.provider_fixture_id = ef.provider_fixture_id
+                AND eg.event_type = 'Goal'
+                AND eg.event_detail != 'Own Goal'
+            WHERE ef.status_short IN ('FT','AET','PEN','FT_PEN','AWD','WO')
+              AND ef.season_year >= YEAR(CURDATE()) - %s
+              {league_fragment}
+            GROUP BY ef.league_id, ef.season_year
+        ),
+        mx AS (SELECT MAX(total_goals) AS m FROM season_totals)
+        SELECT st.league_id, st.season_year, st.total_goals, st.matches,
+               ROUND(st.total_goals / NULLIF(st.matches, 0), 2) AS goals_per_match
+        FROM season_totals st
+        JOIN mx ON st.total_goals = mx.m
+        ORDER BY st.season_year
+    """
+
+    params = (seasons_back,) + league_params
+    conn = _connect(db)
+    cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute(query, params)
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()

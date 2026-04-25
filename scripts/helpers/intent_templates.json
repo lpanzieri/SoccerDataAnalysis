@@ -119,5 +119,91 @@
       "points_for_win": 3,
       "points_for_draw": 1
     }
+  },
+  {
+    "intent": "top_scorers",
+    "match_phrases": [
+      "top scorers",
+      "most goals",
+      "who scored the most",
+      "highest goalscorer",
+      "top goalscorer",
+      "best scorer",
+      "leading scorer",
+      "who has scored the most goals"
+    ],
+    "helper_function": "get_top_scorers",
+    "requires_league": false,
+    "pass_league_code": true,
+    "kwargs": {
+      "seasons_back": 3,
+      "limit": 20
+    },
+    "dynamic_kwargs": [
+      "seasons_back_from_question"
+    ]
+  },
+  {
+    "intent": "top_assisters",
+    "match_phrases": [
+      "top assisters",
+      "most assists",
+      "who assisted the most",
+      "highest assists",
+      "best playmaker",
+      "most creative player",
+      "who has the most assists"
+    ],
+    "helper_function": "get_top_assisters",
+    "requires_league": false,
+    "pass_league_code": true,
+    "kwargs": {
+      "seasons_back": 3,
+      "limit": 20
+    },
+    "dynamic_kwargs": [
+      "seasons_back_from_question"
+    ]
+  },
+  {
+    "intent": "goals_per_match_leaders",
+    "match_phrases": [
+      "best goals per game",
+      "highest goals per match",
+      "best goals per match ratio",
+      "most efficient scorer",
+      "goals per game ratio"
+    ],
+    "helper_function": "get_goals_per_match_leaders",
+    "requires_league": false,
+    "pass_league_code": true,
+    "kwargs": {
+      "seasons_back": 3,
+      "min_matches": 10,
+      "limit": 20
+    },
+    "dynamic_kwargs": [
+      "seasons_back_from_question"
+    ]
+  },
+  {
+    "intent": "goals_per_match_by_league",
+    "match_phrases": [
+      "goals per match by league",
+      "most goals per game league",
+      "highest scoring league",
+      "which league has the most goals",
+      "goals per match league comparison",
+      "average goals per game by league"
+    ],
+    "helper_function": "get_goals_per_match_by_league",
+    "requires_league": false,
+    "pass_league_code": true,
+    "kwargs": {
+      "seasons_back": 3
+    },
+    "dynamic_kwargs": [
+      "seasons_back_from_question"
+    ]
   }
 ]
