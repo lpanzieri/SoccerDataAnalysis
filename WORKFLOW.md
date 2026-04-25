@@ -112,6 +112,10 @@ This document provides a step-by-step workflow and best practices to efficiently
 - **If the cache is not updated or used:**
   - Check the cache key logic and table schema.
   - Ensure `latest_data_timestamp` is extracted correctly.
+- **If template, alias, or registry edits do not appear immediately during development:**
+  - Loader files are cached in process with a TTL.
+  - Set `HELPER_LOADER_CACHE_TTL_SECONDS=0` to disable the loader cache temporarily.
+  - Registry writes refresh their in-memory cache immediately; template and alias edits become visible after TTL expiry or process restart.
 - **If badges are null/missing:**
   - Inspect DB schema (`team` vs `team_badge`).
   - Verify league ID namespace mismatch and enable `league_name` fallback.

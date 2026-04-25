@@ -72,6 +72,8 @@ import importlib.util
 import json
 import os
 import re
+import time
+from copy import deepcopy
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
@@ -89,6 +91,10 @@ INTENT_TEMPLATES_PATH = HELPERS_ROOT / "intent_templates.json"
 LEAGUE_ALIASES_PATH = HELPERS_ROOT / "league_aliases.json"
 UNKNOWN_QUESTIONS_LOG = HELPERS_ROOT / "unknown_questions.log"
 CACHE_TABLE_NAME = "helper_response_cache"
+LOADER_CACHE_TTL_SECONDS = 30.0
+
+
+_json_loader_cache: Dict[Path, Dict[str, Any]] = {}
 
 
 DEFAULT_TEMPLATES = [
@@ -191,53 +197,91 @@ def _env_bool(name: str, default: bool) -> bool:
     return raw.strip().lower() not in {"0", "false", "no", "off", ""}
 
 
+def _loader_cache_ttl_seconds() -> float:
+    raw = os.getenv("HELPER_LOADER_CACHE_TTL_SECONDS")
+    if raw is None:
+        return LOADER_CACHE_TTL_SECONDS
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return LOADER_CACHE_TTL_SECONDS
+
+
+def _set_loader_cache(path: Path, value: Any) -> None:
+    try:
+        mtime_ns = path.stat().st_mtime_ns
+    except FileNotFoundError:
+        mtime_ns = None
+    _json_loader_cache[path] = {
+        "loaded_at": time.monotonic(),
+        "mtime_ns": mtime_ns,
+        "value": deepcopy(value),
+    }
+
+
+def _invalidate_loader_cache(path: Path) -> None:
+    _json_loader_cache.pop(path, None)
+
+
+def _load_json_with_ttl_cache(path: Path, default_value: Any, expected_type: type) -> Any:
+    ttl_seconds = _loader_cache_ttl_seconds()
+    cached = _json_loader_cache.get(path)
+    now = time.monotonic()
+
+    if cached and ttl_seconds > 0 and (now - cached["loaded_at"]) < ttl_seconds:
+        return deepcopy(cached["value"])
+
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        data = deepcopy(default_value)
+
+    if not isinstance(data, expected_type):
+        data = deepcopy(default_value)
+
+    _set_loader_cache(path, data)
+    return deepcopy(data)
+
+
 def _ensure_storage() -> None:
     GENERATED_DIR.mkdir(parents=True, exist_ok=True)
     if not REGISTRY_PATH.exists():
         REGISTRY_PATH.write_text("{}\n", encoding="utf-8")
+        _set_loader_cache(REGISTRY_PATH, {})
     if not INTENT_TEMPLATES_PATH.exists():
+        templates = deepcopy(DEFAULT_TEMPLATES)
         INTENT_TEMPLATES_PATH.write_text(
-            json.dumps(DEFAULT_TEMPLATES, indent=2, ensure_ascii=True) + "\n",
+            json.dumps(templates, indent=2, ensure_ascii=True) + "\n",
             encoding="utf-8",
         )
+        _set_loader_cache(INTENT_TEMPLATES_PATH, templates)
     if not LEAGUE_ALIASES_PATH.exists():
+        aliases = deepcopy(DEFAULT_LEAGUE_ALIASES)
         LEAGUE_ALIASES_PATH.write_text(
-            json.dumps(DEFAULT_LEAGUE_ALIASES, indent=2, ensure_ascii=True) + "\n",
+            json.dumps(aliases, indent=2, ensure_ascii=True) + "\n",
             encoding="utf-8",
         )
+        _set_loader_cache(LEAGUE_ALIASES_PATH, aliases)
 
 
 def _load_registry() -> Dict[str, Dict[str, Any]]:
     _ensure_storage()
-    try:
-        return json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
+    return _load_json_with_ttl_cache(REGISTRY_PATH, {}, dict)
 
 
 def _save_registry(registry: Dict[str, Dict[str, Any]]) -> None:
     REGISTRY_PATH.write_text(json.dumps(registry, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    _set_loader_cache(REGISTRY_PATH, registry)
 
 
 def _load_templates() -> List[Dict[str, Any]]:
     _ensure_storage()
-    try:
-        data = json.loads(INTENT_TEMPLATES_PATH.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        data = DEFAULT_TEMPLATES
-    if not isinstance(data, list):
-        return DEFAULT_TEMPLATES
-    return data
+    return _load_json_with_ttl_cache(INTENT_TEMPLATES_PATH, DEFAULT_TEMPLATES, list)
 
 
 def _load_league_aliases() -> Dict[str, str]:
     _ensure_storage()
-    try:
-        data = json.loads(LEAGUE_ALIASES_PATH.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        data = DEFAULT_LEAGUE_ALIASES
-    if not isinstance(data, dict):
-        return DEFAULT_LEAGUE_ALIASES
+    data = _load_json_with_ttl_cache(LEAGUE_ALIASES_PATH, DEFAULT_LEAGUE_ALIASES, dict)
     return {str(k).lower(): str(v).upper() for k, v in data.items()}
 
 

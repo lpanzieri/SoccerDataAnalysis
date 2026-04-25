@@ -36,6 +36,32 @@ Initial interpretation:
 - This aligns with known hot-path overhead in `dynamic_helper_manager.py` (per-request cache ensure/prune/freshness checks and potential inline refresh logic).
 - Priority remains Tasks 7, 8, 9 to make caching beneficial.
 
+## Execution Log
+
+### Task 6 - TTL memory cache for loader files
+
+- Branch: `opt/task-6-loader-ttl-cache`
+- Status: complete
+- Report file: `benchmarks/helper_benchmark_20260425_170329.json`
+- Validation mode: cache disabled, 10 runs, 2 warmups, DB user `root`
+- Result:
+  - `p50`: 320.70 ms
+  - `p95`: 324.38 ms
+  - avg DB execute calls/run: 44
+- Delta vs prior cache-off baseline:
+  - `p50`: 362.36 ms -> 320.70 ms
+  - `p95`: 365.54 ms -> 324.38 ms
+  - avg DB execute calls/run: unchanged at 44
+- Regression checks passed:
+  - `intent == graphical_goals_comparison`
+  - `image == True`
+  - `base64_image == True`
+  - `meta.image_path` present
+- Notes:
+  - `helper_registry.json`, `intent_templates.json`, and `league_aliases.json` are now cached in process with a TTL.
+  - Registry writes refresh the in-memory cache immediately.
+  - TTL can be overridden with `HELPER_LOADER_CACHE_TTL_SECONDS`.
+
 ## Week Plan
 
 ### Day 1 - Baseline + Quick Wins (Helpers)
@@ -80,6 +106,7 @@ Initial interpretation:
 - Target file: `scripts/helpers/dynamic_helper_manager.py`
 - Effort: 2-4 hours
 - Risk: Low
+- Status: Done on `opt/task-6-loader-ttl-cache`
 
 7. Move cache table ensure/prune out of hot request path.
 - Target file: `scripts/helpers/dynamic_helper_manager.py`
@@ -148,8 +175,8 @@ Initial interpretation:
 - If p95 worsens or output contract breaks, revert that task only.
 
 ## Tracking Template
-- [ ] Task ID
-- [ ] Code complete
-- [ ] Benchmark delta recorded
-- [ ] Regression checks passed
-- [ ] Docs updated
+- [x] Task 6
+- [x] Code complete
+- [x] Benchmark delta recorded
+- [x] Regression checks passed
+- [x] Docs updated
