@@ -8,8 +8,7 @@ def fetch_and_insert_missing_data_from_api(db: DBConfig, league_code: str, from_
     """
     import os
     import mysql.connector
-    from datetime import datetime
-    from scripts.sync_api_football_events import sync_fixtures, connect_db
+    from sync_api_football_events import sync_fixtures
 
     api_key = os.getenv("APIFOOTBALL_KEY", "")
     if not api_key:

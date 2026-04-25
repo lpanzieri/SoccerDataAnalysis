@@ -36,6 +36,32 @@ Initial interpretation:
 - This aligns with known hot-path overhead in `dynamic_helper_manager.py` (per-request cache ensure/prune/freshness checks and potential inline refresh logic).
 - Priority remains Tasks 7, 8, 9 to make caching beneficial.
 
+## Execution Log
+
+### Task 2 - Batched goals aggregation query
+
+- Branch: `opt/task-2-batched-goals-query`
+- Status: complete
+- Report file: `benchmarks/helper_benchmark_20260425_165746.json`
+- Validation mode: cache disabled, 10 runs, 2 warmups, DB user `root`
+- Result:
+  - `p50`: 310.09 ms
+  - `p95`: 318.47 ms
+  - avg DB execute calls/run: 9
+- Delta vs prior cache-off baseline:
+  - `p50`: 362.36 ms -> 310.09 ms
+  - `p95`: 365.54 ms -> 318.47 ms
+  - avg DB execute calls/run: 44 -> 9
+- Regression checks passed:
+  - `intent == graphical_goals_comparison`
+  - `image == True`
+  - `base64_image == True`
+  - `meta.image_path` present
+  - `meta.team_badges` populated for Inter, Milan, Juventus, Napoli
+- Notes:
+  - The per-team/per-season goal lookups were replaced with a single batched aggregation query over the requested seasons and team IDs.
+  - A stale cache refresh import path regression was corrected while validating this branch, but cache-path optimization work remains scoped to Tasks 7-9.
+
 ## Week Plan
 
 ### Day 1 - Baseline + Quick Wins (Helpers)
@@ -52,6 +78,7 @@ Initial interpretation:
 - Validation:
   - same `team_goals` values as before
   - fewer DB calls per chart request
+ - Status: Done on `opt/task-2-batched-goals-query`
 
 3. Cache schema capability checks in-process (avoid repeated `information_schema` reads).
 - Target file: `scripts/helpers/league_records.py`
@@ -148,8 +175,8 @@ Initial interpretation:
 - If p95 worsens or output contract breaks, revert that task only.
 
 ## Tracking Template
-- [ ] Task ID
-- [ ] Code complete
-- [ ] Benchmark delta recorded
-- [ ] Regression checks passed
-- [ ] Docs updated
+- [x] Task 2
+- [x] Code complete
+- [x] Benchmark delta recorded
+- [x] Regression checks passed
+- [x] Docs updated
