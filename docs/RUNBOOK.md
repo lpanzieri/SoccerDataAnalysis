@@ -207,6 +207,20 @@ conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capture-output \
   init --csv /home/lpanzieri/Data-Analysis/plans/major5_2016_current_schedule.csv
 ```
 
+Major-5 historical linking pass (2016-to-current, unmapped fixtures only):
+```bash
+cd /home/lpanzieri/Data-Analysis
+set -a && source ./.cron.env && set +a
+conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capture-output \
+  python /home/lpanzieri/Data-Analysis/scripts/maintenance/link_historical_to_event_fixtures.py \
+  --min-season-year 2016 \
+  --max-season-year 2025 \
+  --league-codes E0,SP1,I1,D1,F1 \
+  --api-league-ids 39,140,135,78,61 \
+  --min-confidence 72.0 \
+  --only-unmapped
+```
+
 ## 10) Assets
 Generated badge-based SVG examples:
 - [assets/inter_logo_name_from_db.svg](../assets/inter_logo_name_from_db.svg)

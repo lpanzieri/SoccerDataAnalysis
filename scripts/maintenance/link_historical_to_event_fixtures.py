@@ -53,6 +53,16 @@ def parse_args() -> argparse.Namespace:
 
     p.add_argument("--min-season-year", type=int, default=2008)
     p.add_argument("--max-season-year", type=int, default=2025)
+    p.add_argument(
+        "--league-codes",
+        default="",
+        help="Optional comma-separated historical league codes filter (for example: E0,SP1,I1,D1,F1)",
+    )
+    p.add_argument(
+        "--api-league-ids",
+        default="",
+        help="Optional comma-separated API league_id filter for event_fixture (for example: 39,140,135,78,61)",
+    )
     p.add_argument("--only-unmapped", action="store_true", default=True)
     p.add_argument("--include-mapped", action="store_true", help="Process fixtures already in mapping table")
     p.add_argument("--limit", type=int, default=0, help="Process at most N fixtures (0 = all)")
@@ -108,6 +118,13 @@ def similarity(a: str, b: str) -> float:
 def fetch_fixtures(conn, args: argparse.Namespace) -> List[FixtureRow]:
     where = ["ef.season_year BETWEEN %s AND %s"]
     params: List[object] = [args.min_season_year, args.max_season_year]
+
+    if args.api_league_ids:
+        api_ids = [int(x.strip()) for x in str(args.api_league_ids).split(",") if x.strip()]
+        if api_ids:
+            placeholders = ",".join(["%s"] * len(api_ids))
+            where.append(f"ef.league_id IN ({placeholders})")
+            params.extend(api_ids)
 
     if not args.include_mapped:
         where.append("m.provider_fixture_id IS NULL")
@@ -170,9 +187,15 @@ def fetch_candidates(conn, season_year: int, from_date: dt.date, to_date: dt.dat
           AND mg.match_date BETWEEN %s AND %s
     """
 
+    params: List[object] = [season_year, from_date, to_date]
+    if getattr(fetch_candidates, "league_codes", None):
+        placeholders = ",".join(["%s"] * len(fetch_candidates.league_codes))
+        sql += f" AND l.league_code IN ({placeholders})"
+        params.extend(fetch_candidates.league_codes)
+
     cur = conn.cursor()
     try:
-        cur.execute(sql, (season_year, from_date, to_date))
+        cur.execute(sql, tuple(params))
         rows = []
         for row in cur.fetchall():
             rows.append(
@@ -282,6 +305,9 @@ def main() -> None:
     if args.include_mapped:
         args.only_unmapped = False
 
+    league_codes = [x.strip() for x in str(args.league_codes).split(",") if x.strip()]
+    fetch_candidates.league_codes = league_codes
+
     conn = connect_db(args)
     log_lines: List[str] = []
     try:
@@ -291,7 +317,8 @@ def main() -> None:
         emit(
             log_lines,
             f"Scope: season_year={args.min_season_year}-{args.max_season_year}, "
-            f"fixtures={total}, min_confidence={args.min_confidence}, dry_run={args.dry_run}"
+            f"fixtures={total}, min_confidence={args.min_confidence}, dry_run={args.dry_run}, "
+            f"league_codes={league_codes or 'ALL'}, api_league_ids={args.api_league_ids or 'ALL'}"
         )
 
         if total == 0:
