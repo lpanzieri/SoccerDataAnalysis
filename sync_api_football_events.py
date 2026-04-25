@@ -17,7 +17,7 @@ import sys
 import time
 import urllib.parse
 import urllib.request
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import mysql.connector
 
@@ -45,9 +45,17 @@ def parse_args():
     p.add_argument("--api-key-env", default="APIFOOTBALL_KEY")
     p.add_argument("--league-id", type=int, default=135, help="Serie A = 135")
     p.add_argument("--season-year", type=int, default=0, help="0 means auto-detect current")
+    p.add_argument(
+        "--season-count",
+        type=int,
+        default=3,
+        help="When --season-year=0, sync current season and this many recent seasons total.",
+    )
     p.add_argument("--daily-limit", type=int, default=100)
     p.add_argument("--reserve", type=int, default=15)
     p.add_argument("--max-event-calls", type=int, default=75)
+    p.add_argument("--max-stats-calls", type=int, default=75)
+    p.add_argument("--max-lineup-calls", type=int, default=75)
     p.add_argument(
         "--max-full-event-backfill-calls",
         type=int,
@@ -76,6 +84,16 @@ def parse_args():
         action="store_true",
         help="Skip refreshing team_name_alias/team_provider_dim at the end of sync",
     )
+    p.add_argument(
+        "--skip-stats-sync",
+        action="store_true",
+        help="Skip /fixtures/statistics ingestion.",
+    )
+    p.add_argument(
+        "--skip-lineups-sync",
+        action="store_true",
+        help="Skip /fixtures/lineups ingestion for player enrichment.",
+    )
     p.add_argument("--log-retention-days", type=int, default=90)
     return p.parse_args()
 
@@ -103,6 +121,7 @@ def ensure_runtime_schema_ready(conn):
         "event_goal",
         "event_timeline",
         "event_fixture_match_map",
+        "event_fixture_enrichment_state",
         "team_name_alias",
         "team_provider_dim",
         "player_dim",
@@ -599,6 +618,354 @@ def get_current_season_year(api_key: str, league_id: int, conn, calls_left: int)
     return int(current[0]["year"]), calls_left - 1
 
 
+def get_recent_season_years(
+    api_key: str,
+    league_id: int,
+    conn,
+    calls_left: int,
+    season_count: int,
+) -> Tuple[List[int], int]:
+    if season_count <= 0:
+        raise RuntimeError("season_count must be positive")
+
+    current_year: Optional[int] = None
+    if calls_left > 0:
+        params = {"id": str(league_id)}
+        code, payload, headers = api_get("/leagues", params, api_key)
+        log_api_call(conn, "/leagues", params, code, headers)
+        calls_left -= 1
+
+        if code == 200:
+            response = payload.get("response", [])
+            if response:
+                seasons = response[0].get("seasons", [])
+                years = [int(s.get("year")) for s in seasons if s.get("year") is not None]
+                if years:
+                    current_year = max(years)
+                for s in seasons:
+                    if s.get("current") and s.get("year") is not None:
+                        current_year = int(s.get("year"))
+                        break
+
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT MAX(season_year)
+            FROM event_fixture
+            WHERE league_id = %s
+            """,
+            (league_id,),
+        )
+        row = cur.fetchone()
+        local_max = int(row[0]) if row and row[0] is not None else None
+    finally:
+        cur.close()
+
+    if current_year is None:
+        current_year = local_max
+
+    if current_year is None:
+        raise RuntimeError("Unable to resolve recent seasons from API or local DB")
+
+    target = [current_year - i for i in range(season_count)]
+    return target, calls_left
+
+
+def _ensure_fixture_enrichment_row(conn, fixture_id: int):
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO event_fixture_enrichment_state (provider_fixture_id)
+            VALUES (%s)
+            ON DUPLICATE KEY UPDATE provider_fixture_id = VALUES(provider_fixture_id)
+            """,
+            (fixture_id,),
+        )
+    finally:
+        cur.close()
+
+
+def mark_fixture_stats_polled(conn, fixture_id: int, http_code: int):
+    _ensure_fixture_enrichment_row(conn, fixture_id)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            UPDATE event_fixture_enrichment_state
+            SET stats_polled_at = %s,
+                last_stats_http_code = %s
+            WHERE provider_fixture_id = %s
+            """,
+            (dt.datetime.now(dt.UTC).replace(tzinfo=None), http_code, fixture_id),
+        )
+    finally:
+        cur.close()
+
+
+def mark_fixture_lineups_polled(conn, fixture_id: int, http_code: int):
+    _ensure_fixture_enrichment_row(conn, fixture_id)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            UPDATE event_fixture_enrichment_state
+            SET lineups_polled_at = %s,
+                last_lineups_http_code = %s
+            WHERE provider_fixture_id = %s
+            """,
+            (dt.datetime.now(dt.UTC).replace(tzinfo=None), http_code, fixture_id),
+        )
+    finally:
+        cur.close()
+
+
+def get_fixtures_needing_stats(conn, league_id: int, season_year: int, max_rows: int) -> List[int]:
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT ef.provider_fixture_id
+            FROM event_fixture ef
+            JOIN event_fixture_match_map mm
+              ON mm.provider_fixture_id = ef.provider_fixture_id
+             AND mm.match_id IS NOT NULL
+            LEFT JOIN event_fixture_enrichment_state es
+              ON es.provider_fixture_id = ef.provider_fixture_id
+            WHERE ef.league_id = %s
+              AND ef.season_year = %s
+              AND ef.status_short IN ('FT', 'AET', 'PEN')
+              AND (es.stats_polled_at IS NULL OR es.last_stats_http_code <> 200)
+            ORDER BY ef.fixture_date_utc ASC
+            LIMIT %s
+            """,
+            (league_id, season_year, max_rows),
+        )
+        return [int(r[0]) for r in cur.fetchall()]
+    finally:
+        cur.close()
+
+
+def get_fixtures_needing_lineups(conn, league_id: int, season_year: int, max_rows: int) -> List[int]:
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT ef.provider_fixture_id
+            FROM event_fixture ef
+            LEFT JOIN event_fixture_enrichment_state es
+              ON es.provider_fixture_id = ef.provider_fixture_id
+            WHERE ef.league_id = %s
+              AND ef.season_year = %s
+              AND ef.status_short IN ('FT', 'AET', 'PEN')
+              AND (es.lineups_polled_at IS NULL OR es.last_lineups_http_code <> 200)
+            ORDER BY ef.fixture_date_utc DESC
+            LIMIT %s
+            """,
+            (league_id, season_year, max_rows),
+        )
+        return [int(r[0]) for r in cur.fetchall()]
+    finally:
+        cur.close()
+
+
+def _parse_stat_value(value: Any) -> Optional[int]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+
+    text = str(value).strip()
+    if not text or text.upper() in {"N/A", "NULL", "NONE"}:
+        return None
+    if text.endswith("%"):
+        text = text[:-1].strip()
+    try:
+        return int(float(text))
+    except ValueError:
+        return None
+
+
+def _get_fixture_match_context(conn, fixture_id: int) -> Optional[Tuple[int, Optional[int], Optional[int]]]:
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT mm.match_id, ef.home_team_id, ef.away_team_id
+            FROM event_fixture ef
+            LEFT JOIN event_fixture_match_map mm ON mm.provider_fixture_id = ef.provider_fixture_id
+            WHERE ef.provider_fixture_id = %s
+            """,
+            (fixture_id,),
+        )
+        row = cur.fetchone()
+        if not row or row[0] is None:
+            return None
+        return int(row[0]), (int(row[1]) if row[1] is not None else None), (int(row[2]) if row[2] is not None else None)
+    finally:
+        cur.close()
+
+
+def upsert_match_stats_from_api(conn, fixture_id: int, response_rows: List[Dict[str, Any]]):
+    ctx = _get_fixture_match_context(conn, fixture_id)
+    if ctx is None:
+        return
+
+    match_id, home_team_id, away_team_id = ctx
+
+    stat_aliases = {
+        "shots on goal": "shots_on_target",
+        "total shots": "shots",
+        "fouls": "fouls",
+        "corner kicks": "corners",
+        "yellow cards": "yellow_cards",
+        "red cards": "red_cards",
+        "offsides": "offsides",
+        "hit woodwork": "hit_woodwork",
+        "free kicks": "free_kicks_conceded",
+    }
+
+    by_side: Dict[str, Dict[str, Optional[int]]] = {
+        "home": {},
+        "away": {},
+    }
+
+    for team_block in response_rows:
+        team_id = (team_block.get("team") or {}).get("id")
+        side = None
+        if home_team_id is not None and team_id == home_team_id:
+            side = "home"
+        elif away_team_id is not None and team_id == away_team_id:
+            side = "away"
+        elif side is None:
+            if not by_side["home"]:
+                side = "home"
+            elif not by_side["away"]:
+                side = "away"
+        if side is None:
+            continue
+
+        for stat in team_block.get("statistics", []):
+            name = str(stat.get("type", "")).strip().lower()
+            metric = stat_aliases.get(name)
+            if metric is None:
+                continue
+            by_side[side][metric] = _parse_stat_value(stat.get("value"))
+
+    hy = by_side["home"].get("yellow_cards")
+    hr = by_side["home"].get("red_cards")
+    ay = by_side["away"].get("yellow_cards")
+    ar = by_side["away"].get("red_cards")
+    home_booking_points = (0 if hy is None else hy * 10) + (0 if hr is None else hr * 25)
+    away_booking_points = (0 if ay is None else ay * 10) + (0 if ar is None else ar * 25)
+
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO match_stats (
+                match_id,
+                home_shots,
+                away_shots,
+                home_shots_on_target,
+                away_shots_on_target,
+                home_fouls,
+                away_fouls,
+                home_corners,
+                away_corners,
+                home_yellow_cards,
+                away_yellow_cards,
+                home_red_cards,
+                away_red_cards,
+                home_offsides,
+                away_offsides,
+                home_hit_woodwork,
+                away_hit_woodwork,
+                home_booking_points,
+                away_booking_points,
+                home_free_kicks_conceded,
+                away_free_kicks_conceded
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                home_shots = VALUES(home_shots),
+                away_shots = VALUES(away_shots),
+                home_shots_on_target = VALUES(home_shots_on_target),
+                away_shots_on_target = VALUES(away_shots_on_target),
+                home_fouls = VALUES(home_fouls),
+                away_fouls = VALUES(away_fouls),
+                home_corners = VALUES(home_corners),
+                away_corners = VALUES(away_corners),
+                home_yellow_cards = VALUES(home_yellow_cards),
+                away_yellow_cards = VALUES(away_yellow_cards),
+                home_red_cards = VALUES(home_red_cards),
+                away_red_cards = VALUES(away_red_cards),
+                home_offsides = VALUES(home_offsides),
+                away_offsides = VALUES(away_offsides),
+                home_hit_woodwork = VALUES(home_hit_woodwork),
+                away_hit_woodwork = VALUES(away_hit_woodwork),
+                home_booking_points = VALUES(home_booking_points),
+                away_booking_points = VALUES(away_booking_points),
+                home_free_kicks_conceded = VALUES(home_free_kicks_conceded),
+                away_free_kicks_conceded = VALUES(away_free_kicks_conceded)
+            """,
+            (
+                match_id,
+                by_side["home"].get("shots"),
+                by_side["away"].get("shots"),
+                by_side["home"].get("shots_on_target"),
+                by_side["away"].get("shots_on_target"),
+                by_side["home"].get("fouls"),
+                by_side["away"].get("fouls"),
+                by_side["home"].get("corners"),
+                by_side["away"].get("corners"),
+                by_side["home"].get("yellow_cards"),
+                by_side["away"].get("yellow_cards"),
+                by_side["home"].get("red_cards"),
+                by_side["away"].get("red_cards"),
+                by_side["home"].get("offsides"),
+                by_side["away"].get("offsides"),
+                by_side["home"].get("hit_woodwork"),
+                by_side["away"].get("hit_woodwork"),
+                home_booking_points,
+                away_booking_points,
+                by_side["home"].get("free_kicks_conceded"),
+                by_side["away"].get("free_kicks_conceded"),
+            ),
+        )
+    finally:
+        cur.close()
+
+
+def capture_players_from_lineups(conn, fixture_id: int, response_rows: List[Dict[str, Any]]):
+    observed_at = get_fixture_date_utc(conn, fixture_id)
+    for team_block in response_rows:
+        team_id = (team_block.get("team") or {}).get("id")
+        if team_id is None:
+            continue
+        team_id_int = int(team_id)
+
+        for item in team_block.get("startXI", []):
+            player = item.get("player") or {}
+            maybe_capture_player_identity(
+                conn,
+                player,
+                team_id_int,
+                observed_at,
+                "lineup_startxi",
+            )
+
+        for item in team_block.get("substitutes", []):
+            player = item.get("player") or {}
+            maybe_capture_player_identity(
+                conn,
+                player,
+                team_id_int,
+                observed_at,
+                "lineup_substitute",
+            )
+
+
 def upsert_fixture(conn, fixture_obj: Dict):
     fixture = fixture_obj.get("fixture", {})
     league = fixture_obj.get("league", {})
@@ -669,8 +1036,8 @@ def sync_fixtures(
     season_year: int,
     calls_left: int,
     sleep_seconds: float,
-    adaptive_throttle: bool,
-    adaptive_throttle_max_seconds: float,
+    adaptive_throttle: bool = True,
+    adaptive_throttle_max_seconds: float = 8.0,
 ) -> int:
     if calls_left <= 0:
         return calls_left
@@ -708,6 +1075,98 @@ def sync_fixtures(
         adaptive_throttle_max_seconds=adaptive_throttle_max_seconds,
     )
 
+    return calls_left
+
+
+def sync_fixture_stats(
+    conn,
+    api_key: str,
+    fixture_ids: List[int],
+    calls_left: int,
+    sleep_seconds: float,
+    adaptive_throttle: bool,
+    adaptive_throttle_max_seconds: float,
+) -> int:
+    rate_limited = False
+    for fid in fixture_ids:
+        if calls_left <= 0:
+            break
+
+        params = {"fixture": str(fid)}
+        code, payload, headers = api_get("/fixtures/statistics", params, api_key)
+        log_api_call(conn, "/fixtures/statistics", params, code, headers)
+        calls_left -= 1
+
+        if code == 429:
+            mark_fixture_stats_polled(conn, fid, code)
+            print("WARN: rate limited (429) on /fixtures/statistics. Stopping stats pass.")
+            rate_limited = True
+            break
+
+        if code != 200:
+            mark_fixture_stats_polled(conn, fid, code)
+            print(f"WARN: statistics failed for fixture={fid}, code={code}")
+            continue
+
+        upsert_match_stats_from_api(conn, fid, payload.get("response", []))
+        mark_fixture_stats_polled(conn, fid, code)
+
+        maybe_sleep_between_requests(
+            headers=headers,
+            calls_left=calls_left,
+            sleep_seconds=sleep_seconds,
+            adaptive_throttle=adaptive_throttle,
+            adaptive_throttle_max_seconds=adaptive_throttle_max_seconds,
+        )
+
+    if rate_limited:
+        print("INFO: Resume later with the same command; stats sync is idempotent.")
+    return calls_left
+
+
+def sync_fixture_lineups(
+    conn,
+    api_key: str,
+    fixture_ids: List[int],
+    calls_left: int,
+    sleep_seconds: float,
+    adaptive_throttle: bool,
+    adaptive_throttle_max_seconds: float,
+) -> int:
+    rate_limited = False
+    for fid in fixture_ids:
+        if calls_left <= 0:
+            break
+
+        params = {"fixture": str(fid)}
+        code, payload, headers = api_get("/fixtures/lineups", params, api_key)
+        log_api_call(conn, "/fixtures/lineups", params, code, headers)
+        calls_left -= 1
+
+        if code == 429:
+            mark_fixture_lineups_polled(conn, fid, code)
+            print("WARN: rate limited (429) on /fixtures/lineups. Stopping lineup pass.")
+            rate_limited = True
+            break
+
+        if code != 200:
+            mark_fixture_lineups_polled(conn, fid, code)
+            print(f"WARN: lineups failed for fixture={fid}, code={code}")
+            continue
+
+        capture_players_from_lineups(conn, fid, payload.get("response", []))
+        mark_fixture_lineups_polled(conn, fid, code)
+
+        maybe_sleep_between_requests(
+            headers=headers,
+            calls_left=calls_left,
+            sleep_seconds=sleep_seconds,
+            adaptive_throttle=adaptive_throttle,
+            adaptive_throttle_max_seconds=adaptive_throttle_max_seconds,
+        )
+
+    if rate_limited:
+        print("INFO: Resume later with the same command; lineup sync is idempotent.")
     return calls_left
 
 
@@ -1082,13 +1541,22 @@ def main():
         ensure_runtime_schema_ready(conn)
 
         calls_left = usable_calls
-        season_year = args.season_year
-        if season_year <= 0:
-            season_year, calls_left = get_current_season_year(api_key, args.league_id, conn, calls_left)
-            print(f"Detected current season year: {season_year}")
+        if args.season_year > 0:
+            target_seasons = [args.season_year]
+        else:
+            target_seasons, calls_left = get_recent_season_years(
+                api_key,
+                args.league_id,
+                conn,
+                calls_left,
+                args.season_count,
+            )
+
+        if not target_seasons:
+            raise RuntimeError("No target seasons resolved for sync")
 
         print(f"Daily budget: total={args.daily_limit}, reserve={args.reserve}, usable={usable_calls}")
-        print(f"Sync fixtures for league={args.league_id}, season={season_year}")
+        print(f"Sync fixtures for league={args.league_id}, seasons={target_seasons}")
         adaptive_throttle_enabled = not args.disable_adaptive_throttle
         if adaptive_throttle_enabled:
             print(
@@ -1097,59 +1565,107 @@ def main():
             )
         else:
             print(f"Adaptive throttle: disabled (fixed sleep={args.sleep_seconds})")
-        if args.skip_fixture_refresh:
-            print("Skipping fixture refresh (--skip-fixture-refresh enabled).")
-        else:
-            calls_left = sync_fixtures(
-                conn,
-                api_key,
-                args.league_id,
-                season_year,
-                calls_left,
-                args.sleep_seconds,
-                adaptive_throttle_enabled,
-                args.adaptive_throttle_max_seconds,
-            )
-            conn.commit()
 
-        max_event_calls = min(args.max_event_calls, calls_left)
-        fixture_ids = get_fixtures_needing_events(conn, args.league_id, season_year, max_event_calls)
-        print(f"Fixtures missing events (processing now): {len(fixture_ids)}")
+        for season_year in target_seasons:
+            print(f"--- Season {season_year} ---")
+            if args.skip_fixture_refresh:
+                print("Skipping fixture refresh (--skip-fixture-refresh enabled).")
+            else:
+                calls_left = sync_fixtures(
+                    conn,
+                    api_key,
+                    args.league_id,
+                    season_year,
+                    calls_left,
+                    args.sleep_seconds,
+                    adaptive_throttle_enabled,
+                    args.adaptive_throttle_max_seconds,
+                )
+                conn.commit()
 
-        calls_left = sync_events(
-            conn,
-            api_key,
-            fixture_ids,
-            calls_left,
-            args.sleep_seconds,
-            adaptive_throttle_enabled,
-            args.adaptive_throttle_max_seconds,
-        )
-        conn.commit()
+            max_event_calls = min(args.max_event_calls, calls_left)
+            fixture_ids = get_fixtures_needing_events(conn, args.league_id, season_year, max_event_calls)
+            print(f"Fixtures missing events (processing now): {len(fixture_ids)}")
 
-        backfill_calls = min(args.max_full_event_backfill_calls, calls_left)
-        if backfill_calls > 0:
-            repoll_ids = get_polled_fixtures_missing_timeline(
-                conn, args.league_id, season_year, backfill_calls
-            )
-            print(
-                "Already-polled fixtures missing full timeline "
-                f"(repoll now): {len(repoll_ids)}"
-            )
             calls_left = sync_events(
                 conn,
                 api_key,
-                repoll_ids,
+                fixture_ids,
                 calls_left,
                 args.sleep_seconds,
                 adaptive_throttle_enabled,
                 args.adaptive_throttle_max_seconds,
-                force_repoll=True,
             )
             conn.commit()
 
+            backfill_calls = min(args.max_full_event_backfill_calls, calls_left)
+            if backfill_calls > 0:
+                repoll_ids = get_polled_fixtures_missing_timeline(
+                    conn, args.league_id, season_year, backfill_calls
+                )
+                print(
+                    "Already-polled fixtures missing full timeline "
+                    f"(repoll now): {len(repoll_ids)}"
+                )
+                calls_left = sync_events(
+                    conn,
+                    api_key,
+                    repoll_ids,
+                    calls_left,
+                    args.sleep_seconds,
+                    adaptive_throttle_enabled,
+                    args.adaptive_throttle_max_seconds,
+                    force_repoll=True,
+                )
+                conn.commit()
+
+            if args.skip_stats_sync:
+                print("Skipping fixture statistics sync (--skip-stats-sync enabled).")
+            else:
+                max_stats_calls = min(args.max_stats_calls, calls_left)
+                stats_fixture_ids = get_fixtures_needing_stats(
+                    conn,
+                    args.league_id,
+                    season_year,
+                    max_stats_calls,
+                )
+                print(f"Fixtures needing statistics sync: {len(stats_fixture_ids)}")
+                calls_left = sync_fixture_stats(
+                    conn,
+                    api_key,
+                    stats_fixture_ids,
+                    calls_left,
+                    args.sleep_seconds,
+                    adaptive_throttle_enabled,
+                    args.adaptive_throttle_max_seconds,
+                )
+                conn.commit()
+
+            if args.skip_lineups_sync:
+                print("Skipping lineup/player sync (--skip-lineups-sync enabled).")
+            else:
+                max_lineup_calls = min(args.max_lineup_calls, calls_left)
+                lineup_fixture_ids = get_fixtures_needing_lineups(
+                    conn,
+                    args.league_id,
+                    season_year,
+                    max_lineup_calls,
+                )
+                print(f"Fixtures needing lineup sync: {len(lineup_fixture_ids)}")
+                calls_left = sync_fixture_lineups(
+                    conn,
+                    api_key,
+                    lineup_fixture_ids,
+                    calls_left,
+                    args.sleep_seconds,
+                    adaptive_throttle_enabled,
+                    args.adaptive_throttle_max_seconds,
+                )
+                conn.commit()
+
         db_upsert_state(conn, "last_sync_league", str(args.league_id))
-        db_upsert_state(conn, "last_sync_season_year", str(season_year))
+        db_upsert_state(conn, "last_sync_season_year", str(target_seasons[0]))
+        db_upsert_state(conn, "last_sync_season_years", ",".join(str(y) for y in target_seasons))
         db_upsert_state(conn, "last_sync_utc", dt.datetime.now(dt.UTC).isoformat())
         name_stats = None
         if args.skip_name_normalization:
@@ -1163,7 +1679,7 @@ def main():
         try:
             cur.execute(
                 "SELECT COUNT(*) FROM event_fixture WHERE league_id=%s AND season_year=%s",
-                (args.league_id, season_year),
+                (args.league_id, target_seasons[0]),
             )
             fixtures_count = cur.fetchone()[0]
             cur.execute(
@@ -1173,7 +1689,7 @@ def main():
                 JOIN event_fixture ef ON ef.provider_fixture_id = eg.provider_fixture_id
                 WHERE ef.league_id=%s AND ef.season_year=%s
                 """,
-                (args.league_id, season_year),
+                (args.league_id, target_seasons[0]),
             )
             goals_count = cur.fetchone()[0]
             cur.execute(
@@ -1183,7 +1699,7 @@ def main():
                 JOIN event_fixture ef ON ef.provider_fixture_id = et.provider_fixture_id
                 WHERE ef.league_id=%s AND ef.season_year=%s
                 """,
-                (args.league_id, season_year),
+                (args.league_id, target_seasons[0]),
             )
             timeline_count = cur.fetchone()[0]
         finally:

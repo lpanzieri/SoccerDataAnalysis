@@ -114,6 +114,7 @@ def validate_required_tables(conn):
         "event_goal",
         "event_timeline",
         "event_fixture_match_map",
+        "event_fixture_enrichment_state",
         "team_badge",
         "team_provider_dim",
         "team_name_alias",

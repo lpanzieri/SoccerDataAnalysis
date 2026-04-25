@@ -270,6 +270,18 @@ CREATE TABLE IF NOT EXISTS event_fixture_match_map (
     CONSTRAINT fk_event_match_map_match FOREIGN KEY (match_id) REFERENCES match_game(match_id)
 );
 
+CREATE TABLE IF NOT EXISTS event_fixture_enrichment_state (
+    provider_fixture_id BIGINT PRIMARY KEY,
+    stats_polled_at DATETIME NULL,
+    lineups_polled_at DATETIME NULL,
+    last_stats_http_code INT NULL,
+    last_lineups_http_code INT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_event_fixture_enrichment_stats (stats_polled_at, last_stats_http_code),
+    KEY idx_event_fixture_enrichment_lineups (lineups_polled_at, last_lineups_http_code),
+    CONSTRAINT fk_event_fixture_enrichment_fixture FOREIGN KEY (provider_fixture_id) REFERENCES event_fixture(provider_fixture_id)
+);
+
 CREATE TABLE IF NOT EXISTS team_badge (
     badge_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     provider_team_id BIGINT NOT NULL,
