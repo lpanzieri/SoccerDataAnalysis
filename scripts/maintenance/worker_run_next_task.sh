@@ -7,6 +7,11 @@ LOG_DIR="$ROOT/logs"
 PYTHON_BIN="$ROOT/.conda/bin/python"
 ERROR_LOG="$LOG_DIR/worker_errors_$(date +%F).log"
 STALE_IN_PROGRESS_MINUTES="${STALE_IN_PROGRESS_MINUTES:-90}"
+BACKFILL_SCOPE="${BACKFILL_SCOPE:-all}"
+BACKFILL_MIN_START_YEAR="${BACKFILL_MIN_START_YEAR:-0}"
+
+TOP5_CODES="E0,SP1,I1,D1,F1"
+TOP5_API_IDS="39,140,135,78,61"
 
 mkdir -p "$LOG_DIR"
 
@@ -133,6 +138,20 @@ map_league_code_to_api_id() {
   esac
 }
 
+is_top5_code() {
+  case "$1" in
+    E0|SP1|I1|D1|F1) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+is_top5_api_id() {
+  case "$1" in
+    39|140|135|78|61) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 if [[ ! -f "$ENV_FILE" ]]; then
   log "Missing env file: $ENV_FILE"
   log_error_event "bootstrap" "missing_env_file"
@@ -219,6 +238,32 @@ fi
 
 log "Picked task_id=$TASK_ID day=$DAY_NO type=$ITEM_TYPE league=$LEAGUE_CODE api_league_id=$API_LEAGUE_ID year=$START_YEAR est_calls=$EST_CALLS"
 
+if [[ "$BACKFILL_SCOPE" == "top5_2016_plus" || "$BACKFILL_SCOPE" == "top5" ]]; then
+  if ! is_top5_code "$LEAGUE_CODE" || ! is_top5_api_id "$API_LEAGUE_ID"; then
+    NOTE="skipped by scope guard: BACKFILL_SCOPE=$BACKFILL_SCOPE"
+    log "$NOTE"
+    "$PYTHON_BIN" "$ROOT/scripts/maintenance/backfill_progress_tracker.py" \
+      --host "$DB_HOST" --port "$DB_PORT" --user "$DB_USER" --database "$DB_NAME" \
+      mark-task --day "$DAY_NO" --item-type "$ITEM_TYPE" --league-code "$LEAGUE_CODE" \
+      --start-year "$START_YEAR" --status skipped --notes "$NOTE"
+    update_day_status "$DAY_NO"
+    exit 0
+  fi
+fi
+
+if [[ "$BACKFILL_MIN_START_YEAR" =~ ^[0-9]+$ ]] && [[ "$BACKFILL_MIN_START_YEAR" -gt 0 ]]; then
+  if [[ "$START_YEAR" -lt "$BACKFILL_MIN_START_YEAR" ]]; then
+    NOTE="skipped by year guard: start_year=$START_YEAR < BACKFILL_MIN_START_YEAR=$BACKFILL_MIN_START_YEAR"
+    log "$NOTE"
+    "$PYTHON_BIN" "$ROOT/scripts/maintenance/backfill_progress_tracker.py" \
+      --host "$DB_HOST" --port "$DB_PORT" --user "$DB_USER" --database "$DB_NAME" \
+      mark-task --day "$DAY_NO" --item-type "$ITEM_TYPE" --league-code "$LEAGUE_CODE" \
+      --start-year "$START_YEAR" --status skipped --notes "$NOTE"
+    update_day_status "$DAY_NO"
+    exit 0
+  fi
+fi
+
 "$PYTHON_BIN" "$ROOT/scripts/maintenance/backfill_progress_tracker.py" \
   --host "$DB_HOST" --port "$DB_PORT" --user "$DB_USER" --database "$DB_NAME" \
   mark-day --day "$DAY_NO" --status in_progress --notes "worker started task_id=$TASK_ID" || true
@@ -294,10 +339,15 @@ if [[ "$SYNC_RC" -ne 0 ]]; then
 fi
 
 LINK_LOG="$LOG_DIR/link_${LEAGUE_CODE}_${START_YEAR}_$(date +%F_%H%M%S).log"
+LINKER_SCOPE_ARGS=()
+if [[ "$BACKFILL_SCOPE" == "top5_2016_plus" || "$BACKFILL_SCOPE" == "top5" ]]; then
+  LINKER_SCOPE_ARGS+=(--league-codes "$TOP5_CODES" --api-league-ids "$TOP5_API_IDS")
+fi
 set +e
 "$PYTHON_BIN" "$ROOT/scripts/maintenance/link_historical_to_event_fixtures.py" \
   --host "$DB_HOST" --port "$DB_PORT" --user "$DB_USER" --database "$DB_NAME" \
   --min-season-year "$START_YEAR" --max-season-year "$START_YEAR" \
+  "${LINKER_SCOPE_ARGS[@]}" \
   --progress-every 200 \
   --log-file "$LINK_LOG"
 LINK_RC=$?

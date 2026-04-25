@@ -221,6 +221,20 @@ conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capture-output \
   --only-unmapped
 ```
 
+Optional worker guardrails for major-5 API gap-fill runs:
+```bash
+cd /home/lpanzieri/Data-Analysis
+set -a && source ./.cron.env && set +a
+export BACKFILL_SCOPE=top5_2016_plus
+export BACKFILL_MIN_START_YEAR=2016
+bash /home/lpanzieri/Data-Analysis/scripts/maintenance/worker_run_next_task.sh
+```
+
+Guardrail behavior:
+- tasks outside major-5 (E0, SP1, I1, D1, F1) are skipped
+- tasks with `start_year < BACKFILL_MIN_START_YEAR` are skipped
+- linker is auto-scoped to major-5 only when the top5 guard is enabled
+
 ## 10) Assets
 Generated badge-based SVG examples:
 - [assets/inter_logo_name_from_db.svg](../assets/inter_logo_name_from_db.svg)
