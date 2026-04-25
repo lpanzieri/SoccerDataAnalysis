@@ -267,6 +267,9 @@ SYNC_LOG="$LOG_DIR/sync_${LEAGUE_CODE}_${START_YEAR}_$(date +%F_%H%M%S).log"
   --league-id "$API_LEAGUE_ID" --season-year "$START_YEAR" \
   --daily-limit 75000 --reserve 500 \
   --max-event-calls "$EVENT_CALLS" \
+  --max-stats-calls "$EVENT_CALLS" \
+  --max-lineup-calls "$EVENT_CALLS" \
+  --max-player-stats-calls "$EVENT_CALLS" \
   --max-full-event-backfill-calls 0 \
   --sleep-seconds 1.5 \
   "${SYNC_EXTRA_ARGS[@]}" > "$SYNC_LOG" 2>&1

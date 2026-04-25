@@ -71,6 +71,7 @@ This document provides a step-by-step workflow and best practices to efficiently
   - If `team.badge_path` exists, allow file-path badge loading.
   - If not, fallback to `team_badge.badge_image` blob loading.
   - For chart scripts that render directly from event/provider IDs, add a live API fallback path for missing `team_badge` rows and persist newly fetched badges back into `team_badge`.
+  - Badge API pulls are considered free for this project, so always attempt API backfill when a displayed team has no local badge blob.
 - **Do not assume league IDs are in the same namespace across tables.**
   - Local `league.league_id` may differ from provider IDs in `team_badge.league_id`.
   - Rank badge matches by: local league_id match, then normalized `league_name` match, then latest season/update.
@@ -137,6 +138,15 @@ This document provides a step-by-step workflow and best practices to efficiently
   - Expose stable JSON endpoints and keep DB/API credentials server-side only.
   - External agents should integrate through API contracts, not direct shell access.
   - Require bearer-token authentication and enable rate limiting before internet exposure.
+- **Always respect API-Football limits in every script and report flow.**
+  - Use header-aware pacing and stop conditions (`requests-remaining`, `retry-after`, reset headers).
+  - When remaining quota reaches reserve threshold, stop further API calls for that run.
+  - On HTTP 429, honor retry windows before any further attempt.
+- **Result-update workflows must keep player stats in lockstep.**
+  - Any operational workflow that updates fixture results through `sync_api_football_events.py` must also pass `--max-player-stats-calls` (and avoid `--skip-player-stats-sync`) so per-player match stats remain consistent with fixture/event/stat updates.
+  - Global enforcement is now active in `sync_api_football_events.py`: runs that enable fixture outcome enrichment (`events`, `event backfill`, `statistics`, or `lineups`) will fail fast if `--skip-player-stats-sync` is set.
+  - Validation command:
+    - `grep -n "sync_api_football_events.py" scripts/maintenance/worker_run_next_task.sh && grep -n "max-player-stats-calls" scripts/maintenance/worker_run_next_task.sh && conda run -p ./.conda --no-capture-output python sync_api_football_events.py --league-id 39 --season-year 2025 --skip-player-stats-sync --max-event-calls 1 --skip-fixture-refresh`
 - **Before writing one-off logic, evaluate whether the task is recurrent and should become a reusable helper Python function.**
   - Prefer adding/expanding helper functions in `scripts/helpers/` (or another stable module) when the same operation is likely to be repeated.
   - Keep helper signatures explicit and return structured payloads that are easy to test and reuse.

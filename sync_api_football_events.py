@@ -20,9 +20,11 @@ import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
 import mysql.connector
+from scripts.helpers.api_football_guard import ApiGuard, api_get_json
 
 API_BASE = "https://v3.football.api-sports.io"
 COMPLETED_STATUSES = {"FT", "AET", "PEN"}
+_API_GUARD: Optional[ApiGuard] = None
 
 
 def guard_unsafe_secret_flags():
@@ -94,6 +96,12 @@ def parse_args():
         action="store_true",
         help="Skip /fixtures/lineups ingestion for player enrichment.",
     )
+    p.add_argument("--max-player-stats-calls", type=int, default=75)
+    p.add_argument(
+        "--skip-player-stats-sync",
+        action="store_true",
+        help="Skip /fixtures/players per-match player stats ingestion.",
+    )
     p.add_argument("--log-retention-days", type=int, default=90)
     return p.parse_args()
 
@@ -127,6 +135,7 @@ def ensure_runtime_schema_ready(conn):
         "player_dim",
         "player_team_history",
         "player_name_alias",
+        "player_match_stats",
     }
     required_event_fixture_columns = {
         "events_polled_at",
@@ -456,26 +465,30 @@ def purge_old_api_logs(conn, retention_days: int) -> int:
 
 
 def api_get(path: str, params: Dict[str, str], api_key: str) -> Tuple[int, Dict, Dict[str, str]]:
-    qs = urllib.parse.urlencode(params)
-    url = f"{API_BASE}{path}?{qs}"
-    req = urllib.request.Request(
-        url,
-        headers={
-            "x-apisports-key": api_key,
-            "Accept": "application/json",
-            "User-Agent": "data-analysis-sync/1.0",
-        },
-        method="GET",
+    global _API_GUARD
+    if _API_GUARD is None:
+        _API_GUARD = ApiGuard.from_env(user_agent="data-analysis-sync/1.0")
+
+    code, payload, headers = api_get_json(
+        guard=_API_GUARD,
+        api_key=api_key,
+        path=path,
+        params=params,
+        timeout_seconds=30,
     )
 
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            body = resp.read().decode("utf-8")
-            return resp.getcode(), json.loads(body), dict(resp.headers)
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        payload = {"error": body}
-        return e.code, payload, dict(e.headers)
+    if code == 200 and _API_GUARD.should_stop_from_remaining(headers):
+        # Respect provider limits by stopping before consuming the final remaining calls.
+        _API_GUARD.log_call(path=path, code=code, headers=headers, action="stop-reserve")
+        return 429, {"error": "Remaining API quota reached configured reserve threshold"}, headers
+
+    if code == 429:
+        waited = _API_GUARD.sleep_retry_window(headers)
+        _API_GUARD.log_call(path=path, code=code, headers=headers, action=f"backoff-{waited}s")
+        payload = dict(payload)
+        payload["retry_after_seconds"] = waited
+
+    return code, payload, headers
 
 
 def payload_plan_error(payload: Dict) -> Optional[str]:
@@ -755,6 +768,243 @@ def get_fixtures_needing_lineups(conn, league_id: int, season_year: int, max_row
     finally:
         cur.close()
 
+
+def mark_fixture_player_stats_polled(conn, fixture_id: int, http_code: int):
+    _ensure_fixture_enrichment_row(conn, fixture_id)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            UPDATE event_fixture_enrichment_state
+            SET player_stats_polled_at = %s,
+                last_player_stats_http_code = %s
+            WHERE provider_fixture_id = %s
+            """,
+            (dt.datetime.now(dt.UTC).replace(tzinfo=None), http_code, fixture_id),
+        )
+    finally:
+        cur.close()
+
+
+def get_fixtures_needing_player_stats(conn, league_id: int, season_year: int, max_rows: int) -> List[int]:
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT ef.provider_fixture_id
+            FROM event_fixture ef
+            LEFT JOIN event_fixture_enrichment_state es
+              ON es.provider_fixture_id = ef.provider_fixture_id
+            WHERE ef.league_id = %s
+              AND ef.season_year = %s
+              AND ef.status_short IN ('FT', 'AET', 'PEN')
+              AND (es.player_stats_polled_at IS NULL OR es.last_player_stats_http_code <> 200)
+            ORDER BY ef.fixture_date_utc DESC
+            LIMIT %s
+            """,
+            (league_id, season_year, max_rows),
+        )
+        return [int(r[0]) for r in cur.fetchall()]
+    finally:
+        cur.close()
+
+
+def _parse_stat_float(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    if not text or text.upper() in {"N/A", "NULL", "NONE"}:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def upsert_player_match_stats(conn, fixture_id: int, response_rows: List[Dict[str, Any]]):
+    observed_at = get_fixture_date_utc(conn, fixture_id)
+    cur = conn.cursor()
+    try:
+        for team_block in response_rows:
+            team_id = (team_block.get("team") or {}).get("id")
+            team_id_int = int(team_id) if team_id is not None else None
+
+            for item in team_block.get("players", []):
+                player = item.get("player") or {}
+                player_id = player.get("id")
+                if player_id is None:
+                    continue
+                player_id_int = int(player_id)
+
+                maybe_capture_player_identity(
+                    conn,
+                    player,
+                    team_id_int,
+                    observed_at,
+                    "player_stats",
+                )
+
+                stats_list = item.get("statistics") or []
+                s = stats_list[0] if stats_list else {}
+
+                games = s.get("games") or {}
+                shots = s.get("shots") or {}
+                goals = s.get("goals") or {}
+                passes = s.get("passes") or {}
+                tackles = s.get("tackles") or {}
+                duels = s.get("duels") or {}
+                dribbles = s.get("dribbles") or {}
+                fouls = s.get("fouls") or {}
+                cards = s.get("cards") or {}
+                penalty = s.get("penalty") or {}
+
+                rating_raw = _parse_stat_float(games.get("rating"))
+                rating_val = round(rating_raw, 2) if rating_raw is not None else None
+                captain_val = 1 if games.get("captain") else 0
+                substitute_val = 1 if games.get("substitute") else 0
+
+                cur.execute(
+                    """
+                    INSERT INTO player_match_stats (
+                        provider_fixture_id, provider_player_id, provider_team_id,
+                        minutes_played, jersey_number, position, rating,
+                        is_captain, is_substitute,
+                        shots_total, shots_on_target,
+                        goals_scored, goals_conceded, assists, saves,
+                        passes_total, key_passes, pass_accuracy,
+                        tackles_total, blocks, interceptions,
+                        duels_total, duels_won,
+                        dribbles_attempted, dribbles_success,
+                        fouls_drawn, fouls_committed,
+                        yellow_cards, red_cards,
+                        offsides,
+                        penalty_won, penalty_committed, penalty_scored, penalty_missed, penalty_saved
+                    ) VALUES (
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s
+                    )
+                    ON DUPLICATE KEY UPDATE
+                        provider_team_id = VALUES(provider_team_id),
+                        minutes_played = VALUES(minutes_played),
+                        jersey_number = VALUES(jersey_number),
+                        position = VALUES(position),
+                        rating = VALUES(rating),
+                        is_captain = VALUES(is_captain),
+                        is_substitute = VALUES(is_substitute),
+                        shots_total = VALUES(shots_total),
+                        shots_on_target = VALUES(shots_on_target),
+                        goals_scored = VALUES(goals_scored),
+                        goals_conceded = VALUES(goals_conceded),
+                        assists = VALUES(assists),
+                        saves = VALUES(saves),
+                        passes_total = VALUES(passes_total),
+                        key_passes = VALUES(key_passes),
+                        pass_accuracy = VALUES(pass_accuracy),
+                        tackles_total = VALUES(tackles_total),
+                        blocks = VALUES(blocks),
+                        interceptions = VALUES(interceptions),
+                        duels_total = VALUES(duels_total),
+                        duels_won = VALUES(duels_won),
+                        dribbles_attempted = VALUES(dribbles_attempted),
+                        dribbles_success = VALUES(dribbles_success),
+                        fouls_drawn = VALUES(fouls_drawn),
+                        fouls_committed = VALUES(fouls_committed),
+                        yellow_cards = VALUES(yellow_cards),
+                        red_cards = VALUES(red_cards),
+                        offsides = VALUES(offsides),
+                        penalty_won = VALUES(penalty_won),
+                        penalty_committed = VALUES(penalty_committed),
+                        penalty_scored = VALUES(penalty_scored),
+                        penalty_missed = VALUES(penalty_missed),
+                        penalty_saved = VALUES(penalty_saved)
+                    """,
+                    (
+                        fixture_id, player_id_int, team_id_int,
+                        _parse_stat_value(games.get("minutes")),
+                        _parse_stat_value(games.get("number")),
+                        str(games.get("position") or "")[:2] or None,
+                        rating_val,
+                        captain_val,
+                        substitute_val,
+                        _parse_stat_value(shots.get("total")),
+                        _parse_stat_value(shots.get("on")),
+                        _parse_stat_value(goals.get("total")),
+                        _parse_stat_value(goals.get("conceded")),
+                        _parse_stat_value(goals.get("assists")),
+                        _parse_stat_value(goals.get("saves")),
+                        _parse_stat_value(passes.get("total")),
+                        _parse_stat_value(passes.get("key")),
+                        _parse_stat_value(passes.get("accuracy")),
+                        _parse_stat_value(tackles.get("total")),
+                        _parse_stat_value(tackles.get("blocks")),
+                        _parse_stat_value(tackles.get("interceptions")),
+                        _parse_stat_value(duels.get("total")),
+                        _parse_stat_value(duels.get("won")),
+                        _parse_stat_value(dribbles.get("attempts")),
+                        _parse_stat_value(dribbles.get("success")),
+                        _parse_stat_value(fouls.get("drawn")),
+                        _parse_stat_value(fouls.get("committed")),
+                        _parse_stat_value(cards.get("yellow")),
+                        _parse_stat_value(cards.get("red")),
+                        _parse_stat_value(s.get("offsides")),
+                        _parse_stat_value(penalty.get("won")),
+                        _parse_stat_value(penalty.get("commited")),
+                        _parse_stat_value(penalty.get("scored")),
+                        _parse_stat_value(penalty.get("missed")),
+                        _parse_stat_value(penalty.get("saved")),
+                    ),
+                )
+    finally:
+        cur.close()
+
+
+def sync_fixture_player_stats(
+    conn,
+    api_key: str,
+    fixture_ids: List[int],
+    calls_left: int,
+    sleep_seconds: float,
+    adaptive_throttle: bool,
+    adaptive_throttle_max_seconds: float,
+) -> int:
+    rate_limited = False
+    for fid in fixture_ids:
+        if calls_left <= 0:
+            break
+
+        params = {"fixture": str(fid)}
+        code, payload, headers = api_get("/fixtures/players", params, api_key)
+        log_api_call(conn, "/fixtures/players", params, code, headers)
+        calls_left -= 1
+
+        if code == 429:
+            mark_fixture_player_stats_polled(conn, fid, code)
+            print("WARN: rate limited (429) on /fixtures/players. Stopping player-stats pass.")
+            rate_limited = True
+            break
+
+        if code != 200:
+            mark_fixture_player_stats_polled(conn, fid, code)
+            print(f"WARN: player stats failed for fixture={fid}, code={code}")
+            continue
+
+        upsert_player_match_stats(conn, fid, payload.get("response", []))
+        mark_fixture_player_stats_polled(conn, fid, code)
+
+        maybe_sleep_between_requests(
+            headers=headers,
+            calls_left=calls_left,
+            sleep_seconds=sleep_seconds,
+            adaptive_throttle=adaptive_throttle,
+            adaptive_throttle_max_seconds=adaptive_throttle_max_seconds,
+        )
+
+    if rate_limited:
+        print("INFO: Resume later with the same command; player-stats sync is idempotent.")
+    return calls_left
 
 def _parse_stat_value(value: Any) -> Optional[int]:
     if value is None:
@@ -1514,9 +1764,28 @@ def sync_events(
 
 def main():
     args = parse_args()
+
+    # Global consistency guard: if a run enriches fixture outcomes, it must also
+    # keep per-player match stats in sync.
+    enriches_fixture_outcomes = (
+        args.max_event_calls > 0
+        or args.max_full_event_backfill_calls > 0
+        or (not args.skip_stats_sync and args.max_stats_calls > 0)
+        or (not args.skip_lineups_sync and args.max_lineup_calls > 0)
+    )
+    if enriches_fixture_outcomes and args.skip_player_stats_sync:
+        raise SystemExit(
+            "Refusing inconsistent run: fixture outcome enrichment is enabled but "
+            "player stats sync is disabled (--skip-player-stats-sync)."
+        )
+
     api_key = os.getenv(args.api_key_env, "")
     if not api_key:
         raise SystemExit("APIFOOTBALL_KEY missing. Set environment variable APIFOOTBALL_KEY.")
+
+    global _API_GUARD
+    _API_GUARD = ApiGuard.from_env(user_agent="data-analysis-sync/1.0")
+    _API_GUARD.remaining_reserve = max(0, int(args.reserve))
 
     usable_calls = max(0, args.daily_limit - args.reserve)
     if usable_calls <= 0:
@@ -1642,6 +1911,28 @@ def main():
                     conn,
                     api_key,
                     lineup_fixture_ids,
+                    calls_left,
+                    args.sleep_seconds,
+                    adaptive_throttle_enabled,
+                    args.adaptive_throttle_max_seconds,
+                )
+                conn.commit()
+
+            if args.skip_player_stats_sync:
+                print("Skipping player match stats sync (--skip-player-stats-sync enabled).")
+            else:
+                max_player_stats_calls = min(args.max_player_stats_calls, calls_left)
+                player_stats_fixture_ids = get_fixtures_needing_player_stats(
+                    conn,
+                    args.league_id,
+                    season_year,
+                    max_player_stats_calls,
+                )
+                print(f"Fixtures needing player stats sync: {len(player_stats_fixture_ids)}")
+                calls_left = sync_fixture_player_stats(
+                    conn,
+                    api_key,
+                    player_stats_fixture_ids,
                     calls_left,
                     args.sleep_seconds,
                     adaptive_throttle_enabled,

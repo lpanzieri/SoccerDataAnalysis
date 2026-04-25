@@ -90,6 +90,16 @@ def run_migrations(conn):
         for col, ddl in REQUIRED_EVENT_FIXTURE_COLUMNS.items():
             if col not in existing:
                 cur.execute(ddl)
+
+            cur.execute("SHOW COLUMNS FROM event_fixture_enrichment_state")
+            enrichment_existing = {r[0] for r in cur.fetchall()}
+            enrichment_migrations = {
+                "player_stats_polled_at": "ALTER TABLE event_fixture_enrichment_state ADD COLUMN player_stats_polled_at DATETIME NULL",
+                "last_player_stats_http_code": "ALTER TABLE event_fixture_enrichment_state ADD COLUMN last_player_stats_http_code INT NULL",
+            }
+            for col, ddl in enrichment_migrations.items():
+                if col not in enrichment_existing:
+                    cur.execute(ddl)
     finally:
         cur.close()
 
@@ -120,6 +130,7 @@ def validate_required_tables(conn):
         "team_name_alias",
         "backfill_task",
         "backfill_day_log",
+        "player_match_stats",
     }
     cur = conn.cursor()
     try:
