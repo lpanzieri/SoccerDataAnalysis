@@ -167,6 +167,33 @@ MYSQL_PASSWORD='***' conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capt
   --host 127.0.0.1 --port 3306 --user football_admin --database historic_football_data --date $(date +%F)
 ```
 
+Major-5 2016-to-current baseline snapshot (read-only):
+```bash
+cd /home/lpanzieri/Data-Analysis
+set -a && source ./.cron.env && set +a
+conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capture-output \
+  python /home/lpanzieri/Data-Analysis/scripts/maintenance/snapshot_major5_backfill_baseline.py \
+  --min-start-year 2016 \
+  --max-start-year 0 \
+  --out-prefix plans/major5_backfill_baseline
+```
+
+Major-5 2016-to-current schedule generation (no API calls):
+```bash
+cd /home/lpanzieri/Data-Analysis
+set -a && source ./.cron.env && set +a
+conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capture-output \
+  python /home/lpanzieri/Data-Analysis/scripts/maintenance/build_daily_pull_schedule.py \
+  --scope top5 \
+  --min-start-year 2016 \
+  --max-start-year 2025 \
+  --daily-limit 75000 \
+  --max-batch-calls 1000 \
+  --include-player-stats \
+  --players-pages-per-team-season 2.0 \
+  --csv-out plans/major5_2016_2025_schedule.csv
+```
+
 ## 10) Assets
 Generated badge-based SVG examples:
 - [assets/inter_logo_name_from_db.svg](../assets/inter_logo_name_from_db.svg)
