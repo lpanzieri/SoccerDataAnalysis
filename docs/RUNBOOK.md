@@ -294,6 +294,23 @@ Artifact notes:
 - a progress line is emitted at start, each cycle start/end, and stop condition
 - summary includes stop reason, final pending count, final API remaining, runtime, and links to the progress/log files
 
+Step-8 final validation report (matrix + replay-ready gap list):
+```bash
+cd /home/lpanzieri/Data-Analysis
+set -a && source ./.cron.env && set +a
+conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capture-output \
+  python /home/lpanzieri/Data-Analysis/scripts/maintenance/generate_major5_backfill_report.py \
+  --min-start-year 2016 \
+  --max-start-year 0 \
+  --max-gap-rows 0 \
+  --out-prefix plans/reports/major5_backfill_report
+```
+
+Step-8 outputs:
+- `<prefix>_matrix.csv`: league-season completeness matrix
+- `<prefix>_gaps.csv`: fixture-level replay-ready gaps (missing mapping/timeline/player stats)
+- `<prefix>_summary.json`: totals + artifact paths
+
 ## 10) Assets
 Generated badge-based SVG examples:
 - [assets/inter_logo_name_from_db.svg](../assets/inter_logo_name_from_db.svg)
