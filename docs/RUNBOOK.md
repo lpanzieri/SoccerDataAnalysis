@@ -285,6 +285,15 @@ Stop conditions in overnight runner:
 - optional `MAX_RUNTIME_MINUTES` reached
 - optional `MAX_LOOPS` reached
 
+Step-7 artifacts emitted by overnight runner:
+- progress stream (JSONL): `plans/reports/overnight_major5_progress_<run_id>.jsonl`
+- final summary (JSON): `plans/reports/overnight_major5_summary_<run_id>.json`
+- runner log: `logs/overnight_major5_<run_id>.log`
+
+Artifact notes:
+- a progress line is emitted at start, each cycle start/end, and stop condition
+- summary includes stop reason, final pending count, final API remaining, runtime, and links to the progress/log files
+
 ## 10) Assets
 Generated badge-based SVG examples:
 - [assets/inter_logo_name_from_db.svg](../assets/inter_logo_name_from_db.svg)
