@@ -112,6 +112,8 @@ This document provides a step-by-step workflow and best practices to efficiently
 - **If the cache is not updated or used:**
   - Check the cache key logic and table schema.
   - Ensure `latest_data_timestamp` is extracted correctly.
+  - Cache table initialization is process-scoped; avoid forcing table ensure on every request.
+  - Expired-row pruning is interval-based; tune with `HELPER_CACHE_PRUNE_INTERVAL_SECONDS` and `HELPER_CACHE_PRUNE_LIMIT`.
 - **If badges are null/missing:**
   - Inspect DB schema (`team` vs `team_badge`).
   - Verify league ID namespace mismatch and enable `league_name` fallback.

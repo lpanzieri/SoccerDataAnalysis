@@ -36,6 +36,34 @@ Initial interpretation:
 - This aligns with known hot-path overhead in `dynamic_helper_manager.py` (per-request cache ensure/prune/freshness checks and potential inline refresh logic).
 - Priority remains Tasks 7, 8, 9 to make caching beneficial.
 
+## Execution Log
+
+### Task 7 - Move cache ensure/prune out of request hot path
+
+- Branch: `opt/task-7-cache-hot-path`
+- Status: complete
+- Report file: `benchmarks/helper_benchmark_20260425_170638.json`
+- Validation mode: cache enabled, 10 runs, 2 warmups, DB user `root`
+- Result:
+  - `p50`: 436.88 ms
+  - `p95`: 449.53 ms
+  - avg DB execute calls/run: 51
+  - cache hit rate: 1.0
+- Delta vs prior cache-on baseline:
+  - `p50`: 714.41 ms -> 436.88 ms
+  - `p95`: 741.79 ms -> 449.53 ms
+  - avg DB execute calls/run: 57 -> 51
+- Regression checks passed:
+  - `intent == graphical_goals_comparison`
+  - `image == True`
+  - `base64_image == True`
+  - cache envelope remains present and structured
+- Notes:
+  - Cache table setup now runs once per DB target in-process.
+  - Expired-row pruning now runs on an interval instead of every request.
+  - Tuning env vars: `HELPER_CACHE_PRUNE_INTERVAL_SECONDS`, `HELPER_CACHE_PRUNE_LIMIT`.
+  - Freshness/API-refresh behavior is still the next bottleneck and remains scoped to Tasks 8-9.
+
 ## Week Plan
 
 ### Day 1 - Baseline + Quick Wins (Helpers)
@@ -86,6 +114,7 @@ Initial interpretation:
 - Effort: 2-4 hours
 - Risk: Medium
 - Validation: request latency drop; cache behavior still correct
+- Status: Done on `opt/task-7-cache-hot-path`
 
 ### Day 4 - Cache Freshness / API Decoupling
 
@@ -148,8 +177,8 @@ Initial interpretation:
 - If p95 worsens or output contract breaks, revert that task only.
 
 ## Tracking Template
-- [ ] Task ID
-- [ ] Code complete
-- [ ] Benchmark delta recorded
-- [ ] Regression checks passed
-- [ ] Docs updated
+- [x] Task 7
+- [x] Code complete
+- [x] Benchmark delta recorded
+- [x] Regression checks passed
+- [x] Docs updated
