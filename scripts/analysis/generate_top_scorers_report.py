@@ -284,14 +284,36 @@ def render_report(
     badges: Dict[int, Optional[bytes]],
     badge_zoom: float,
     output_path: str,
+    compute_backend: str = "cpu",
 ) -> None:
     if not rows:
         raise RuntimeError("No scorer rows found")
 
-    labels = [f"{name} ({season})\n{team} - {league}" for name, season, team, league, _, _, _ in rows]
-    values = np.array([goals for _, _, _, _, _, goals, _ in rows], dtype=float)
-    team_ids = [team_id for _, _, _, _, _, _, team_id in rows]
-    team_names = [team for _, _, team, _, _, _, _ in rows]
+    names = [name for name, _, _, _, _, _, _ in rows]
+    seasons = [season for _, season, _, _, _, _, _ in rows]
+    teams = [team for _, _, team, _, _, _, _ in rows]
+    leagues = [league for _, _, _, league, _, _, _ in rows]
+    goals = np.array([goals for _, _, _, _, _, goals, _ in rows], dtype=float)
+    team_ids_raw = [team_id for _, _, _, _, _, _, team_id in rows]
+
+    order = np.arange(len(rows))
+    if compute_backend == "cuda":
+        try:
+            import cupy as cp  # type: ignore
+
+            goals_cp = cp.asarray(goals)
+            goals_cpu = cp.asnumpy(goals_cp)
+            order = np.lexsort((np.array(names), -goals_cpu))
+        except Exception as exc:
+            print(f"WARN: CUDA path failed in render_report ({exc}); falling back to CPU.")
+            order = np.lexsort((np.array(names), -goals))
+    else:
+        order = np.lexsort((np.array(names), -goals))
+
+    labels = [f"{names[idx]} ({seasons[idx]})\\n{teams[idx]} - {leagues[idx]}" for idx in order]
+    values = goals[order]
+    team_ids = [team_ids_raw[idx] for idx in order]
+    team_names = [teams[idx] for idx in order]
 
     fig_height = max(9.0, 0.85 * len(rows))
     fig, ax = plt.subplots(figsize=(EXPORT_WIDTH_INCHES, fig_height))
@@ -392,7 +414,7 @@ def render_report(
 
 def main() -> None:
     args = parse_args()
-    backend = resolve_compute_backend(args.compute_backend, allow_cuda_execution=False)
+    backend = resolve_compute_backend(args.compute_backend, allow_cuda_execution=True)
     print(
         "INFO: compute backend requested=%s selected=%s reason=%s cuda_enabled=%s cupy_available=%s cuda_devices=%s"
         % (
@@ -430,7 +452,13 @@ def main() -> None:
 
         os.makedirs(args.image_dir, exist_ok=True)
         output_path = os.path.join(args.image_dir, "top10_scorers_report_local.png")
-        render_report(rows=rows, badges=badges, badge_zoom=args.badge_zoom, output_path=output_path)
+        render_report(
+            rows=rows,
+            badges=badges,
+            badge_zoom=args.badge_zoom,
+            output_path=output_path,
+            compute_backend=backend.selected_backend,
+        )
         print(output_path)
     finally:
         cur.close()

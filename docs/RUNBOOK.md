@@ -58,12 +58,13 @@ crontab scripts/maintenance/data_analysis_auto.cron
 crontab -l
 ```
 
-## 4.1) Optional CUDA Runtime (Phase 1)
+## 4.1) Optional CUDA Runtime (Phase 3)
 CUDA support is optional and CPU remains the default execution mode.
 
 Current phase behavior:
 - runtime capability detection is enabled for analysis scripts
-- execution remains CPU-only by design in Phase 1
+- CUDA execution is enabled for heatmap matrix aggregation in `scripts/analysis/generate_goal_heatmap.py`
+- CUDA execution is enabled for ranking/array preparation in `scripts/analysis/generate_top_scorers_report.py`
 
 Supported controls:
 - `ENABLE_CUDA=0|1` (default `1`)
@@ -71,7 +72,8 @@ Supported controls:
 - per-script override: `--compute-backend auto|cpu|cuda`
 
 Notes:
-- `--compute-backend cuda` validates CUDA runtime availability; execution still falls back to CPU in Phase 1.
+- `--compute-backend cuda` attempts CUDA execution in heatmap matrix aggregation and falls back to CPU if runtime path fails.
+- `--compute-backend cuda` attempts CUDA execution in top-scorers ranking/array preparation and falls back to CPU if runtime path fails.
 - missing CUDA libraries/devices never break default `auto` mode.
 
 ## 5) Key Reliability Features

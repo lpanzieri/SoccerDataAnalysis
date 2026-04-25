@@ -14,7 +14,10 @@ This document provides a step-by-step workflow and best practices to efficiently
 - **Optional CUDA rule (mandatory): preserve CPU-first behavior and safe fallback.**
   - CUDA acceleration must remain optional; default behavior must work without CUDA packages or GPU hardware.
   - Runtime backend selection must support `auto|cpu|cuda`; `auto` must never fail due to missing CUDA dependencies.
-  - Validation command: `python - <<'PY'\nfrom scripts.helpers.cuda_runtime import resolve_compute_backend\nprint(resolve_compute_backend('auto', allow_cuda_execution=False))\nprint(resolve_compute_backend('cpu', allow_cuda_execution=False))\nPY`
+  - Current scope: Phase 3 enables CUDA execution for heatmap matrix aggregation in `scripts/analysis/generate_goal_heatmap.py` and ranking/array preparation in `scripts/analysis/generate_top_scorers_report.py`.
+  - Validation command: `python - <<'PY'\nfrom scripts.helpers.cuda_runtime import resolve_compute_backend\nprint(resolve_compute_backend('auto', allow_cuda_execution=True))\nprint(resolve_compute_backend('cpu', allow_cuda_execution=True))\nPY`
+  - Runtime parity check: `source ./.cron.env && python scripts/analysis/generate_goal_heatmap.py --compute-backend auto --league-id 135 --season-year 2025 --image-dir generated_graphs && python scripts/analysis/generate_goal_heatmap.py --compute-backend cpu --league-id 135 --season-year 2025 --image-dir generated_graphs`
+  - Runtime parity check (top scorers): `source ./.cron.env && python scripts/analysis/generate_top_scorers_report.py --compute-backend auto --top-n 10 --image-dir generated_graphs && python scripts/analysis/generate_top_scorers_report.py --compute-backend cpu --top-n 10 --image-dir generated_graphs`
 - **Update both what changed and how to validate it.**
   - Add one short bullet under the relevant section and one validation command/example.
 - **Keep canonical operational docs and filenames stable.**

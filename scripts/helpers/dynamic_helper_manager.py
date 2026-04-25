@@ -58,11 +58,6 @@ def fetch_and_insert_missing_data_from_api(db: DBConfig, league_code: str, from_
             print(f"[API BRIDGE] sync failed for league={provider_id} season={season_year}: {exc}")
         except subprocess.TimeoutExpired:
             print(f"[API BRIDGE] sync timed out for league={provider_id} season={season_year}")
-ss.run(cmd, check=True, timeout=120)
-        except subprocess.CalledProcessError as exc:
-            print(f"[API BRIDGE] sync failed for league={provider_id} season={season_year}: {exc}")
-        except subprocess.TimeoutExpired:
-            print(f"[API BRIDGE] sync timed out for league={provider_id} season={season_year}")
 
 #!/usr/bin/env python3
 """Dynamic helper management for NL football questions.

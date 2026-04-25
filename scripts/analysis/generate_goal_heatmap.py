@@ -319,16 +319,37 @@ def backfill_missing_badges_from_api(
 def build_heatmap_matrix(
     team_rows: List[Tuple[int, str]],
     goal_bins: Dict[int, Dict[int, int]],
+    compute_backend: str = "cpu",
 ) -> Tuple[List[str], List[int], np.ndarray]:
-    ordered_rows: List[Tuple[str, int, List[int]]] = []
-    for team_id, team_name in team_rows:
-        counts = [goal_bins.get(team_id, {}).get(bin_idx, 0) for bin_idx in range(19)]
-        ordered_rows.append((team_name, team_id, counts))
+    labels = [team_name for _, team_name in team_rows]
+    team_ids = [team_id for team_id, _ in team_rows]
+    matrix = np.array(
+        [[goal_bins.get(team_id, {}).get(bin_idx, 0) for bin_idx in range(19)] for team_id in team_ids],
+        dtype=float,
+    )
 
-    ordered_rows.sort(key=lambda row: (sum(row[2]), row[0]), reverse=True)
-    labels = [row[0] for row in ordered_rows]
-    team_ids = [row[1] for row in ordered_rows]
-    matrix = np.array([row[2] for row in ordered_rows], dtype=float)
+    if matrix.size == 0:
+        return labels, team_ids, matrix
+
+    order: np.ndarray
+    if compute_backend == "cuda":
+        try:
+            import cupy as cp  # type: ignore
+
+            matrix_cp = cp.asarray(matrix)
+            totals = cp.asnumpy(matrix_cp.sum(axis=1))
+            order = np.lexsort((np.array(labels), -totals))
+        except Exception as exc:
+            print(f"WARN: CUDA path failed in build_heatmap_matrix ({exc}); falling back to CPU.")
+            totals = matrix.sum(axis=1)
+            order = np.lexsort((np.array(labels), -totals))
+    else:
+        totals = matrix.sum(axis=1)
+        order = np.lexsort((np.array(labels), -totals))
+
+    labels = [labels[idx] for idx in order]
+    team_ids = [team_ids[idx] for idx in order]
+    matrix = matrix[order]
     return labels, team_ids, matrix
 
 
@@ -442,7 +463,7 @@ def render_heatmap(
 
 def main() -> None:
     args = parse_args()
-    backend = resolve_compute_backend(args.compute_backend, allow_cuda_execution=False)
+    backend = resolve_compute_backend(args.compute_backend, allow_cuda_execution=True)
     print(
         "INFO: compute backend requested=%s selected=%s reason=%s cuda_enabled=%s cupy_available=%s cuda_devices=%s"
         % (
@@ -473,7 +494,11 @@ def main() -> None:
         league_name = get_league_name(cur, args.league_id, season_year)
         team_rows = fetch_team_rows(cur, args.league_id, season_year)
         goal_bins = fetch_goal_bins(cur, args.league_id, season_year)
-        labels, team_ids, matrix = build_heatmap_matrix(team_rows, goal_bins)
+        labels, team_ids, matrix = build_heatmap_matrix(
+            team_rows,
+            goal_bins,
+            compute_backend=backend.selected_backend,
+        )
         badges = fetch_badges(cur, args.league_id, season_year, team_ids)
         if not args.disable_live_badge_fallback:
             api_key = os.getenv(args.api_key_env, "")
