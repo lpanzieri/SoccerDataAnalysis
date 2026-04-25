@@ -195,7 +195,16 @@ CREATE TABLE IF NOT EXISTS event_fixture (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_event_fixture_league_season_date (league_id, season_year, fixture_date_utc),
     KEY idx_event_fixture_status (status_short),
-    KEY idx_event_fixture_retry (next_retry_after)
+    KEY idx_event_fixture_retry (next_retry_after),
+    KEY idx_event_fixture_sync_polling (
+        league_id,
+        season_year,
+        status_short,
+        events_polled_at,
+        last_events_http_code,
+        next_retry_after,
+        fixture_date_utc
+    )
 );
 
 CREATE TABLE IF NOT EXISTS event_goal (

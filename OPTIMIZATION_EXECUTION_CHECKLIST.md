@@ -38,6 +38,25 @@ Initial interpretation:
 
 ## Execution Log
 
+### Task 12 - EXPLAIN-driven composite index tuning
+
+- Branch: `opt/task-12-db-explain-index`
+- Status: complete
+- Files changed: `schema.sql`, `docs/TASK12_EXPLAIN_SUMMARY_20260425.md`
+- Changes implemented:
+  - Added validated composite index to `event_fixture`:
+    - `idx_event_fixture_sync_polling (league_id, season_year, status_short, events_polled_at, last_events_http_code, next_retry_after, fixture_date_utc)`
+  - Tested helper-side candidate composite indexes on `match_game`, found regressive plans, and reverted them.
+- EXPLAIN evidence:
+  - Detailed summary: `docs/TASK12_EXPLAIN_SUMMARY_20260425.md`
+  - Sync pending-fixtures query improved:
+    - query cost: `46.80 -> 3.87`
+    - rows examined/scan: `380 -> 6`
+  - Sync repoll-candidates query: no meaningful plan improvement from this pass.
+  - Helper goals-aggregation candidate indexes: rejected due to worse plans.
+- Validation completed:
+  - Post-index sync smoke run completed successfully (`Sync completed successfully.`).
+
 ### Task 11 - Replace fixed sleep pacing with adaptive throttling
 
 - Branch: `opt/task-11-adaptive-throttle`
@@ -304,6 +323,7 @@ Initial interpretation:
 - Validation:
   - EXPLAIN improvements recorded
   - no regression on writes
+- Status: Done on `opt/task-12-db-explain-index`
 
 ### Day 7 - Regression + Documentation
 
@@ -347,6 +367,6 @@ Remaining:
 - [ ] Task 5
 - [~] Task 10 (code complete, smoke benchmark done, throughput delta pending workload)
 - [~] Task 11 (code complete, benchmark done, throughput delta pending workload)
-- [ ] Task 12
+- [x] Task 12
 - [ ] Task 13
 - [ ] Task 14
