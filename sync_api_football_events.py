@@ -628,7 +628,10 @@ def get_recent_season_years(
     if season_count <= 0:
         raise RuntimeError("season_count must be positive")
 
-    current_year: Optional[int] = None
+    # Anchor rolling window to today's year so season_count always means
+    # "now back N seasons" even if older data was previously synced.
+    current_year = dt.datetime.now(dt.UTC).year
+    api_current_year: Optional[int] = None
     if calls_left > 0:
         params = {"id": str(league_id)}
         code, payload, headers = api_get("/leagues", params, api_key)
@@ -641,32 +644,15 @@ def get_recent_season_years(
                 seasons = response[0].get("seasons", [])
                 years = [int(s.get("year")) for s in seasons if s.get("year") is not None]
                 if years:
-                    current_year = max(years)
+                    api_current_year = max(years)
                 for s in seasons:
                     if s.get("current") and s.get("year") is not None:
-                        current_year = int(s.get("year"))
+                        api_current_year = int(s.get("year"))
                         break
 
-    cur = conn.cursor()
-    try:
-        cur.execute(
-            """
-            SELECT MAX(season_year)
-            FROM event_fixture
-            WHERE league_id = %s
-            """,
-            (league_id,),
-        )
-        row = cur.fetchone()
-        local_max = int(row[0]) if row and row[0] is not None else None
-    finally:
-        cur.close()
-
-    if current_year is None:
-        current_year = local_max
-
-    if current_year is None:
-        raise RuntimeError("Unable to resolve recent seasons from API or local DB")
+    # Prefer whichever anchor is newer between API current-season metadata and today's year.
+    if api_current_year is not None:
+        current_year = max(current_year, api_current_year)
 
     target = [current_year - i for i in range(season_count)]
     return target, calls_left
