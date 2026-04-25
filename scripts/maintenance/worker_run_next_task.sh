@@ -297,7 +297,20 @@ if [[ "$EVENT_CALLS" -lt 1 ]]; then
   EVENT_CALLS=1
 fi
 
+IS_RETRY_TASK=0
+if [[ "$ITEM_TYPE" == *"retry"* ]]; then
+  IS_RETRY_TASK=1
+fi
+
+FULL_EVENT_BACKFILL_CALLS=0
+if [[ "$IS_RETRY_TASK" -eq 1 ]]; then
+  FULL_EVENT_BACKFILL_CALLS="$EVENT_CALLS"
+fi
+
 SYNC_EXTRA_ARGS=()
+if [[ "$IS_RETRY_TASK" -eq 1 ]]; then
+  SYNC_EXTRA_ARGS+=(--skip-fixture-refresh)
+fi
 if [[ "$ITEM_TYPE" =~ _part_([0-9]+)$ ]]; then
   PART_NUM="${BASH_REMATCH[1]}"
   if [[ "$PART_NUM" -gt 1 ]]; then
@@ -315,7 +328,7 @@ SYNC_LOG="$LOG_DIR/sync_${LEAGUE_CODE}_${START_YEAR}_$(date +%F_%H%M%S).log"
   --max-stats-calls "$EVENT_CALLS" \
   --max-lineup-calls "$EVENT_CALLS" \
   --max-player-stats-calls "$EVENT_CALLS" \
-  --max-full-event-backfill-calls 0 \
+  --max-full-event-backfill-calls "$FULL_EVENT_BACKFILL_CALLS" \
   --sleep-seconds 1.5 \
   "${SYNC_EXTRA_ARGS[@]}" > "$SYNC_LOG" 2>&1
 SYNC_RC=$?

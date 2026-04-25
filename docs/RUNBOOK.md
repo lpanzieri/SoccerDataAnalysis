@@ -235,6 +235,38 @@ Guardrail behavior:
 - tasks with `start_year < BACKFILL_MIN_START_YEAR` are skipped
 - linker is auto-scoped to major-5 only when the top5 guard is enabled
 
+Build targeted major-5 retry schedule from current DB gaps:
+```bash
+cd /home/lpanzieri/Data-Analysis
+set -a && source ./.cron.env && set +a
+conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capture-output \
+  python /home/lpanzieri/Data-Analysis/scripts/maintenance/build_major5_retry_schedule.py \
+  --min-start-year 2016 \
+  --max-start-year 0 \
+  --retry-mode both \
+  --daily-limit 75000 \
+  --max-batch-calls 1000 \
+  --csv-out plans/major5_retry_schedule.csv
+```
+
+Load retry schedule into tracker queue:
+```bash
+cd /home/lpanzieri/Data-Analysis
+set -a && source ./.cron.env && set +a
+conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capture-output \
+  python /home/lpanzieri/Data-Analysis/scripts/maintenance/backfill_progress_tracker.py \
+  --host ${MYSQL_HOST:-127.0.0.1} \
+  --port ${MYSQL_PORT:-3306} \
+  --user ${MYSQL_USER} \
+  --database ${MYSQL_DATABASE:-historic_football_data} \
+  init --csv /home/lpanzieri/Data-Analysis/plans/major5_retry_schedule.csv
+```
+
+Retry task behavior in worker:
+- `item_type` containing `retry` triggers `--skip-fixture-refresh`.
+- retry tasks enable `--max-full-event-backfill-calls` from task budget to re-poll already-known fixtures missing events.
+- stats/lineups/player-stats remain enabled to preserve result->player lockstep.
+
 ## 10) Assets
 Generated badge-based SVG examples:
 - [assets/inter_logo_name_from_db.svg](../assets/inter_logo_name_from_db.svg)
