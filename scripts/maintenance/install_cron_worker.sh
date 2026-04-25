@@ -43,6 +43,7 @@ else
   echo
   echo "Apply manually on your machine with:"
   echo "  crontab $NEW_CRON_TMP"
+  echo "Canonical checked-in template: $ROOT/scripts/maintenance/data_analysis_auto.cron"
   rm -f /tmp/data_analysis_cron_install.err
 fi
 

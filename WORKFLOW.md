@@ -10,6 +10,9 @@ This document provides a step-by-step workflow and best practices to efficiently
   - Do not defer docs updates. `WORKFLOW.md` is part of the implementation, not optional commentary.
 - **Update both what changed and how to validate it.**
   - Add one short bullet under the relevant section and one validation command/example.
+- **Keep canonical operational docs and filenames stable.**
+  - The runbook lives at `docs/RUNBOOK.md`.
+  - The checked-in cron template lives at `scripts/maintenance/data_analysis_auto.cron`.
 
 ---
 

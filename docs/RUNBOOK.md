@@ -1,9 +1,3 @@
-# 5) TODO / Next Steps
-
-- Implement a FastAPI (or Flask) API server to expose the backend helper/caching pipeline for frontend integration.
-  - Design endpoints for football Q&A and data services.
-  - Add authentication and security.
-  - Connect the LAMP frontend to the API.
 # Data-Analysis Project Runbook
 
 ## 1) Purpose
@@ -28,7 +22,7 @@ Core scripts:
 - linker: [scripts/maintenance/link_historical_to_event_fixtures.py](../scripts/maintenance/link_historical_to_event_fixtures.py)
 - health summary: [scripts/maintenance/summarize_orchestrator_health.py](../scripts/maintenance/summarize_orchestrator_health.py)
 - cron installer: [scripts/maintenance/install_cron_worker.sh](../scripts/maintenance/install_cron_worker.sh)
-- managed cron block: [scripts/maintenance/cron.data-analysis-auto](../scripts/maintenance/cron.data-analysis-auto)
+- managed cron block: [scripts/maintenance/data_analysis_auto.cron](../scripts/maintenance/data_analysis_auto.cron)
 
 ## 3) Data Model (Operational)
 Main operational tables:
@@ -55,12 +49,12 @@ Managed cron jobs:
 - DB backup to SMB every night at 03:20.
 
 Cron definition:
-- [scripts/maintenance/cron.data-analysis-auto](../scripts/maintenance/cron.data-analysis-auto)
+- [scripts/maintenance/data_analysis_auto.cron](../scripts/maintenance/data_analysis_auto.cron)
 
 Apply cron block:
 ```bash
 cd /home/lpanzieri/Data-Analysis
-crontab scripts/maintenance/cron.data-analysis-auto
+crontab scripts/maintenance/data_analysis_auto.cron
 crontab -l
 ```
 
@@ -160,9 +154,10 @@ Generated badge-based SVG examples:
 - [assets/inter_logo_name_from_db.svg](../assets/inter_logo_name_from_db.svg)
 - [assets/juventus_logo_name_from_db.svg](../assets/juventus_logo_name_from_db.svg)
 
-## 11) Footnotes: Next Steps
-[^1]: Upgrade API-Football plan and verify expanded season access (first priority).
-[^2]: Rebuild the mapping-only queue for the new allowed season window and re-init tracker.
-[^3]: Complete/verify league-code to API league-id mappings to reduce blocked tasks.
-[^4]: Run a full health snapshot after first upgraded-plan day and compare blocked reason mix.
-[^5]: Keep stale-task recovery enabled and tune `STALE_IN_PROGRESS_MINUTES` if needed.
+## 11) Next Steps
+- Upgrade the API-Football plan and verify expanded season access.
+- Rebuild the mapping-only queue for the new allowed season window and re-initialize the tracker.
+- Complete or verify league-code to API league-id mappings to reduce blocked tasks.
+- Run a full health snapshot after the first upgraded-plan day and compare the blocked-reason mix.
+- Keep stale-task recovery enabled and tune `STALE_IN_PROGRESS_MINUTES` if needed.
+- Build an API layer for frontend integration if this moves beyond personal-use operations.
