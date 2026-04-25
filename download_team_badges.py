@@ -12,6 +12,7 @@ import urllib.request
 from typing import Dict, List, Tuple
 
 import mysql.connector
+from scripts.helpers.api_football_guard import ApiGuard, api_get_json
 
 API_BASE = "https://v3.football.api-sports.io"
 TOP5_LEAGUES: List[Tuple[int, str]] = [
@@ -72,20 +73,15 @@ def ensure_badges_table_exists(conn):
         cur.close()
 
 
-def api_get_teams(api_key: str, league_id: int, season_year: int) -> Dict:
+def api_get_teams(guard: ApiGuard, api_key: str, league_id: int, season_year: int) -> Tuple[int, Dict, Dict[str, str]]:
     params = {"league": str(league_id), "season": str(season_year)}
-    url = f"{API_BASE}/teams?{urllib.parse.urlencode(params)}"
-    req = urllib.request.Request(
-        url,
-        headers={
-            "x-apisports-key": api_key,
-            "Accept": "application/json",
-            "User-Agent": "badge-downloader/1.0",
-        },
-        method="GET",
+    return api_get_json(
+        guard=guard,
+        api_key=api_key,
+        path="/teams",
+        params=params,
+        timeout_seconds=30,
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode("utf-8"))
 
 
 def download_image(url: str, timeout: int) -> Tuple[bytes, str]:
@@ -151,6 +147,7 @@ def main():
         raise SystemExit("APIFOOTBALL_KEY missing. Set environment variable APIFOOTBALL_KEY.")
 
     conn = connect_db(args)
+    guard = ApiGuard.from_env(user_agent="badge-downloader/1.0")
     try:
         ensure_badges_table_exists(conn)
 
@@ -158,7 +155,25 @@ def main():
         total_downloaded = 0
 
         for league_id, league_name in TOP5_LEAGUES:
-            payload = api_get_teams(api_key, league_id, args.season_year)
+            code, payload, headers = api_get_teams(guard, api_key, league_id, args.season_year)
+            if code == 429:
+                waited = guard.sleep_retry_window(headers)
+                guard.log_call(path="/teams", code=code, headers=headers, action=f"backoff-{waited}s")
+                print(
+                    f"WARN: rate limited on /teams for {league_name} ({league_id}). "
+                    f"Waited {waited}s and stopping to respect limits."
+                )
+                break
+            if code != 200:
+                print(f"WARN: teams endpoint failed for {league_name} ({league_id}) with HTTP {code}: {payload}")
+                continue
+            if guard.should_stop_from_remaining(headers):
+                guard.log_call(path="/teams", code=code, headers=headers, action="stop-reserve")
+                print(
+                    f"WARN: remaining API quota reached reserve threshold after {league_name} ({league_id}); "
+                    "stopping badge run to respect limits."
+                )
+                break
             errors = payload.get("errors")
             if errors:
                 print(f"WARN: teams endpoint error for {league_name} ({league_id}): {errors}")

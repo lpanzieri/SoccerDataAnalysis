@@ -5,11 +5,13 @@ import argparse
 import json
 import os
 import re
+import sys
 import time
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from io import BytesIO
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import matplotlib
@@ -21,6 +23,12 @@ import matplotlib.offsetbox as offsetbox
 import matplotlib.pyplot as plt
 import mysql.connector
 import numpy as np
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.helpers.api_football_guard import ApiGuard, api_get_json
 
 EXPORT_WIDTH_INCHES = 16.0
 EXPORT_DPI = 240
@@ -167,20 +175,25 @@ def fetch_badges(cur, league_id: int, season_year: int, team_ids: List[int]) -> 
     return {int(team_id): bytes(badge_image) if badge_image is not None else None for team_id, badge_image in cur.fetchall()}
 
 
-def api_get_team_badge(api_key: str, provider_team_id: int) -> Optional[Tuple[str, bytes, str, str]]:
-    params = urllib.parse.urlencode({"id": str(provider_team_id)})
-    url = f"{API_BASE}/teams?{params}"
-    req = urllib.request.Request(
-        url,
-        headers={
-            "x-apisports-key": api_key,
-            "Accept": "application/json",
-            "User-Agent": "goal-heatmap/1.0",
-        },
-        method="GET",
+def api_get_team_badge(guard: ApiGuard, api_key: str, provider_team_id: int) -> Optional[Tuple[str, bytes, str, str]]:
+    code, payload, headers = api_get_json(
+        guard=guard,
+        api_key=api_key,
+        path="/teams",
+        params={"id": str(provider_team_id)},
+        timeout_seconds=30,
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        payload = json.loads(resp.read().decode("utf-8"))
+    if code == 429:
+        waited = guard.sleep_retry_window(headers)
+        guard.log_call(path="/teams", code=code, headers=headers, action=f"backoff-{waited}s")
+        print(f"WARN: rate limited while fetching badge for team {provider_team_id}. Waited {waited}s.")
+        return None
+    if code != 200:
+        return None
+    if guard.should_stop_from_remaining(headers):
+        guard.log_call(path="/teams", code=code, headers=headers, action="stop-reserve")
+        print("WARN: stopping badge API pulls due to low remaining quota reserve.")
+        return None
 
     response = payload.get("response") or []
     if not response:
@@ -261,6 +274,8 @@ def backfill_missing_badges_from_api(
     if not api_key:
         return existing_badges
 
+    guard = ApiGuard.from_env(user_agent="goal-heatmap/1.0")
+
     name_by_team_id = {team_id: labels[idx] for idx, team_id in enumerate(team_ids)}
     missing_ids = [team_id for team_id in team_ids if not existing_badges.get(team_id)]
     if not missing_ids:
@@ -268,7 +283,7 @@ def backfill_missing_badges_from_api(
 
     for provider_team_id in missing_ids:
         try:
-            resolved = api_get_team_badge(api_key, provider_team_id)
+            resolved = api_get_team_badge(guard, api_key, provider_team_id)
             if not resolved:
                 continue
             badge_url, badge_image, content_type, api_team_name = resolved
