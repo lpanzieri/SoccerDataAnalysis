@@ -112,6 +112,10 @@ This document provides a step-by-step workflow and best practices to efficiently
 - **If the cache is not updated or used:**
   - Check the cache key logic and table schema.
   - Ensure `latest_data_timestamp` is extracted correctly.
+  - Do not run API sync inline in the request path for stale cache entries.
+  - Serve stale cache immediately and enqueue refresh intent to `scripts/helpers/refresh_queue.jsonl`.
+  - Include `stale` and `refresh_queued` flags in cache metadata when stale payload is served.
+  - Tune duplicate-trigger suppression with `HELPER_REFRESH_TRIGGER_COOLDOWN_SECONDS`.
 - **If badges are null/missing:**
   - Inspect DB schema (`team` vs `team_badge`).
   - Verify league ID namespace mismatch and enable `league_name` fallback.

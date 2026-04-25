@@ -9,7 +9,7 @@ def fetch_and_insert_missing_data_from_api(db: DBConfig, league_code: str, from_
     import os
     import mysql.connector
     from datetime import datetime
-    from scripts.sync_api_football_events import sync_fixtures, connect_db
+    from sync_api_football_events import sync_fixtures
 
     api_key = os.getenv("APIFOOTBALL_KEY", "")
     if not api_key:
@@ -72,6 +72,7 @@ import importlib.util
 import json
 import os
 import re
+import time
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
@@ -89,6 +90,11 @@ INTENT_TEMPLATES_PATH = HELPERS_ROOT / "intent_templates.json"
 LEAGUE_ALIASES_PATH = HELPERS_ROOT / "league_aliases.json"
 UNKNOWN_QUESTIONS_LOG = HELPERS_ROOT / "unknown_questions.log"
 CACHE_TABLE_NAME = "helper_response_cache"
+REFRESH_QUEUE_PATH = HELPERS_ROOT / "refresh_queue.jsonl"
+REFRESH_TRIGGER_COOLDOWN_SECONDS = 300
+
+
+_recent_refresh_triggers: Dict[str, float] = {}
 
 
 DEFAULT_TEMPLATES = [
@@ -471,6 +477,65 @@ def _build_cache_key(normalized_question: str, helper_key: str) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _refresh_trigger_cooldown_seconds() -> int:
+    raw = os.getenv("HELPER_REFRESH_TRIGGER_COOLDOWN_SECONDS")
+    if raw is None:
+        return REFRESH_TRIGGER_COOLDOWN_SECONDS
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return REFRESH_TRIGGER_COOLDOWN_SECONDS
+
+
+def _should_trigger_refresh(trigger_key: str) -> bool:
+    cooldown = _refresh_trigger_cooldown_seconds()
+    now = time.monotonic()
+    last = _recent_refresh_triggers.get(trigger_key)
+    if last is None or (now - last) >= cooldown:
+        _recent_refresh_triggers[trigger_key] = now
+        return True
+    return False
+
+
+def _enqueue_refresh_request(
+    *,
+    question: str,
+    helper_key: str,
+    intent: str,
+    league_code: Optional[str],
+    from_date: str,
+    to_date: str,
+    reason: str,
+) -> bool:
+    queue_item = {
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "question": question,
+        "helper_key": helper_key,
+        "intent": intent,
+        "league_code": league_code,
+        "from_date": from_date,
+        "to_date": to_date,
+        "reason": reason,
+    }
+    trigger_key = f"{intent}|{league_code or 'ALL'}|{from_date}|{to_date}"
+    if not _should_trigger_refresh(trigger_key):
+        return False
+    with REFRESH_QUEUE_PATH.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(queue_item, ensure_ascii=True) + "\n")
+    return True
+
+
+def _to_date_string(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d")
+    text = str(value).strip()
+    if not text:
+        return None
+    return text[:10]
+
+
 def _prune_expired_cache(db: DBConfig, limit: int = 200) -> None:
     conn = _connect_db(db)
     cur = conn.cursor()
@@ -553,6 +618,8 @@ def _set_cached_rows(
         def normalize_rows(rows):
             if isinstance(rows, str):
                 return [{"message": rows}]
+            if isinstance(rows, dict):
+                return [rows]
             if isinstance(rows, list):
                 if all(isinstance(r, str) for r in rows):
                     return [{"message": r} for r in rows]
@@ -578,6 +645,8 @@ def _set_cached_rows(
             return None
 
         latest_data_timestamp = extract_latest_match_date(norm_rows)
+        if latest_data_timestamp is None:
+            latest_data_timestamp = now
         payload = json.dumps(norm_rows, ensure_ascii=True)
 
         conn = _connect_db(db)
@@ -734,10 +803,12 @@ def answer_question_with_helpers(
                     conn.close()
 
             db_latest_ts = get_latest_db_match_date(db, resolved.league_code)
+            cached_latest_date = _to_date_string(cached_latest_ts)
+            db_latest_date = _to_date_string(db_latest_ts)
             today_str = datetime.now().strftime("%Y-%m-%d")
 
             # If cache is up to date (latest data in DB is today), return as usual
-            if cached_latest_ts and db_latest_ts and cached_latest_ts >= today_str and db_latest_ts >= today_str:
+            if cached_latest_date and db_latest_date and cached_latest_date >= today_str and db_latest_date >= today_str:
                 # If this is a graphical answer, return image data at top-level.
                 if resolved.intent.startswith("graphical_"):
                     return {
@@ -752,7 +823,7 @@ def answer_question_with_helpers(
                             "ttl_seconds": cache_ttl_seconds,
                             "cache_key": cache_key,
                             "fresh": True,
-                            "latest_data_timestamp": cached_latest_ts,
+                            "latest_data_timestamp": cached_latest_date,
                         },
                         "image": cached_rows[0]["image_path"] if isinstance(cached_rows, list) and cached_rows and "image_path" in cached_rows[0] else (cached_rows["image_path"] if isinstance(cached_rows, dict) and "image_path" in cached_rows else None),
                         "base64_image": cached_rows[0]["base64_image"] if isinstance(cached_rows, list) and cached_rows and "base64_image" in cached_rows[0] else (cached_rows["base64_image"] if isinstance(cached_rows, dict) and "base64_image" in cached_rows else None),
@@ -771,22 +842,19 @@ def answer_question_with_helpers(
                         "ttl_seconds": cache_ttl_seconds,
                         "cache_key": cache_key,
                         "fresh": True,
-                        "latest_data_timestamp": cached_latest_ts,
+                        "latest_data_timestamp": cached_latest_date,
                     },
                     "rows": cached_rows,
                 }
-            # Otherwise, fetch missing data from API, update DB, then refresh cache
-            fetch_and_insert_missing_data_from_api(db, resolved.league_code, db_latest_ts or "2000-01-01", today_str)
-            # After API update, re-run helper and update cache
-            answer_fn = _load_answer_callable(resolved.helper_file)
-            fresh_rows = _to_json_safe(answer_fn(db))
-            _set_cached_rows(
-                db=db,
-                cache_key=cache_key,
-                normalized_question=normalized_question,
+            refresh_from_date = db_latest_date or "2000-01-01"
+            refresh_queued = _enqueue_refresh_request(
+                question=question,
                 helper_key=resolved.helper_key,
-                rows=fresh_rows,
-                ttl_seconds=cache_ttl_seconds,
+                intent=resolved.intent,
+                league_code=resolved.league_code,
+                from_date=refresh_from_date,
+                to_date=today_str,
+                reason="stale_cache",
             )
             if resolved.intent.startswith("graphical_"):
                 return {
@@ -801,11 +869,13 @@ def answer_question_with_helpers(
                         "ttl_seconds": cache_ttl_seconds,
                         "cache_key": cache_key,
                         "fresh": False,
-                        "latest_data_timestamp": today_str,
+                        "latest_data_timestamp": cached_latest_date,
+                        "stale": True,
+                        "refresh_queued": refresh_queued,
                     },
-                    "image": fresh_rows["image_path"] if isinstance(fresh_rows, dict) and "image_path" in fresh_rows else None,
-                    "base64_image": fresh_rows["base64_image"] if isinstance(fresh_rows, dict) and "base64_image" in fresh_rows else None,
-                    "meta": fresh_rows,
+                    "image": cached_rows[0]["image_path"] if isinstance(cached_rows, list) and cached_rows and "image_path" in cached_rows[0] else (cached_rows["image_path"] if isinstance(cached_rows, dict) and "image_path" in cached_rows else None),
+                    "base64_image": cached_rows[0]["base64_image"] if isinstance(cached_rows, list) and cached_rows and "base64_image" in cached_rows[0] else (cached_rows["base64_image"] if isinstance(cached_rows, dict) and "base64_image" in cached_rows else None),
+                    "meta": cached_rows[0] if isinstance(cached_rows, list) and cached_rows else (cached_rows if isinstance(cached_rows, dict) else {}),
                 }
             return {
                 "helper_key": resolved.helper_key,
@@ -819,9 +889,11 @@ def answer_question_with_helpers(
                     "ttl_seconds": cache_ttl_seconds,
                     "cache_key": cache_key,
                     "fresh": False,
-                    "latest_data_timestamp": today_str,
+                    "latest_data_timestamp": cached_latest_date,
+                    "stale": True,
+                    "refresh_queued": refresh_queued,
                 },
-                "rows": fresh_rows,
+                "rows": cached_rows,
             }
 
     answer_fn = _load_answer_callable(resolved.helper_file)

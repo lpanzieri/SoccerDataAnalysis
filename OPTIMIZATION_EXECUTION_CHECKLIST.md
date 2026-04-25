@@ -36,6 +36,34 @@ Initial interpretation:
 - This aligns with known hot-path overhead in `dynamic_helper_manager.py` (per-request cache ensure/prune/freshness checks and potential inline refresh logic).
 - Priority remains Tasks 7, 8, 9 to make caching beneficial.
 
+## Execution Log
+
+### Task 9 - Decouple API refresh from synchronous request path
+
+- Branch: `opt/task-9-async-refresh-trigger`
+- Status: complete
+- Report file: `benchmarks/helper_benchmark_20260425_171742.json`
+- Validation mode: cache enabled, 10 runs, 2 warmups, DB user `root`
+- Result:
+  - `p50`: 71.86 ms
+  - `p95`: 83.30 ms
+  - avg DB execute calls/run: 8
+  - cache hit rate: 1.0
+- Delta vs prior cache-on baseline:
+  - `p50`: 714.41 ms -> 71.86 ms
+  - `p95`: 741.79 ms -> 83.30 ms
+  - avg DB execute calls/run: 57 -> 8
+- Regression checks passed:
+  - `intent == graphical_goals_comparison`
+  - `image == True` on cache hits
+  - `base64_image == True` on cache hits
+  - `meta.image_path` present on cache hits
+- Notes:
+  - Stale-cache requests now return stale cached payload immediately instead of performing inline API sync.
+  - Refresh intent is queued to `scripts/helpers/refresh_queue.jsonl` with `stale_cache` reason.
+  - Response cache metadata now includes `stale` and `refresh_queued` flags when stale data is served.
+  - Trigger cooldown is configurable via `HELPER_REFRESH_TRIGGER_COOLDOWN_SECONDS`.
+
 ## Week Plan
 
 ### Day 1 - Baseline + Quick Wins (Helpers)
@@ -98,6 +126,7 @@ Initial interpretation:
 - Target files: `scripts/helpers/dynamic_helper_manager.py`, maintenance worker path if needed
 - Effort: 4-6 hours
 - Risk: Medium
+- Status: Done on `opt/task-9-async-refresh-trigger`
 
 ### Day 5 - Sync Throughput Improvements
 
@@ -148,8 +177,8 @@ Initial interpretation:
 - If p95 worsens or output contract breaks, revert that task only.
 
 ## Tracking Template
-- [ ] Task ID
-- [ ] Code complete
-- [ ] Benchmark delta recorded
-- [ ] Regression checks passed
-- [ ] Docs updated
+- [x] Task 9
+- [x] Code complete
+- [x] Benchmark delta recorded
+- [x] Regression checks passed
+- [x] Docs updated
