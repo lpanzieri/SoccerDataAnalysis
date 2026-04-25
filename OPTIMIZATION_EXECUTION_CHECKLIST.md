@@ -38,6 +38,26 @@ Initial interpretation:
 
 ## Execution Log
 
+### Task 13 - End-to-end regression pass
+
+- Branch: `opt/task-13-regression-pass`
+- Status: complete
+- Files changed: `docs/TASK13_REGRESSION_SUMMARY_20260425.md`
+- Regression artifact:
+  - `benchmarks/task13_regression_20260425_173843.json`
+- Scope validated:
+  - intent matching correctness (graphical and non-graphical)
+  - image/base64 contract
+  - badge presence for graphical payloads (`meta.team_badges`)
+  - cache miss/hit correctness
+- Coverage summary:
+  - cases run: 5
+  - cases passed: 5
+  - overall: PASS
+- Notes:
+  - Graphical payloads are image-first and are validated via `image`, `base64_image`, `meta.image_path`, and `meta.team_badges`.
+  - For deterministic cache checks, cache table was reset before each case, then question executed twice to verify miss then hit.
+
 ### Task 12 - EXPLAIN-driven composite index tuning
 
 - Branch: `opt/task-12-db-explain-index`
@@ -334,6 +354,7 @@ Initial interpretation:
   - image/base64 contract
   - badge presence
   - cache hit/miss correctness
+- Status: Done on `opt/task-13-regression-pass`
 
 14. Update docs with measured gains and final operational notes.
 - Target files: `WORKFLOW.md` and this checklist (results section)
@@ -368,5 +389,5 @@ Remaining:
 - [~] Task 10 (code complete, smoke benchmark done, throughput delta pending workload)
 - [~] Task 11 (code complete, benchmark done, throughput delta pending workload)
 - [x] Task 12
-- [ ] Task 13
+- [x] Task 13
 - [ ] Task 14
