@@ -186,12 +186,25 @@ conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capture-output \
   python /home/lpanzieri/Data-Analysis/scripts/maintenance/build_daily_pull_schedule.py \
   --scope top5 \
   --min-start-year 2016 \
-  --max-start-year 2025 \
+  --max-start-year 0 \
   --daily-limit 75000 \
   --max-batch-calls 1000 \
   --include-player-stats \
   --players-pages-per-team-season 2.0 \
-  --csv-out plans/major5_2016_2025_schedule.csv
+  --csv-out plans/major5_2016_current_schedule.csv
+```
+
+Initialize queue tracker from major-5 schedule:
+```bash
+cd /home/lpanzieri/Data-Analysis
+set -a && source ./.cron.env && set +a
+conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capture-output \
+  python /home/lpanzieri/Data-Analysis/scripts/maintenance/backfill_progress_tracker.py \
+  --host ${MYSQL_HOST:-127.0.0.1} \
+  --port ${MYSQL_PORT:-3306} \
+  --user ${MYSQL_USER} \
+  --database ${MYSQL_DATABASE:-historic_football_data} \
+  init --csv /home/lpanzieri/Data-Analysis/plans/major5_2016_current_schedule.csv
 ```
 
 ## 10) Assets

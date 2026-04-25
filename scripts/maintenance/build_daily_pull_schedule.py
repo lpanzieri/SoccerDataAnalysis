@@ -55,7 +55,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--mysql-password-env", default="MYSQL_PASSWORD")
 
     p.add_argument("--min-start-year", type=int, default=2016)
-    p.add_argument("--max-start-year", type=int, default=2025)
+    p.add_argument(
+        "--max-start-year",
+        type=int,
+        default=0,
+        help="Upper year bound. Use 0 to auto-resolve latest year in selected scope.",
+    )
     p.add_argument(
         "--scope",
         choices=["top5", "all"],
@@ -128,7 +133,34 @@ def load_league_meta(conn, scope: str) -> List[Dict[str, object]]:
 
 def resolve_year_span(conn, args: argparse.Namespace, league_meta: List[Dict[str, object]]) -> Tuple[int, int]:
     if not args.auto_span:
-        return int(args.min_start_year), int(args.max_start_year)
+        min_year = int(args.min_start_year)
+        max_year = int(args.max_start_year)
+        if max_year > 0:
+            return min_year, max_year
+
+        # Support min-year anchored planning with latest-year auto resolution.
+        codes = [str(x["league_code"]) for x in league_meta]
+        if not codes:
+            raise SystemExit("No leagues found for selected scope")
+
+        placeholders = ",".join(["%s"] * len(codes))
+        sql = f"""
+            SELECT MAX(s.start_year)
+            FROM match_game mg
+            JOIN league l ON l.league_id = mg.league_id
+            JOIN season s ON s.season_id = mg.season_id
+            WHERE l.league_code IN ({placeholders})
+        """
+
+        cur = conn.cursor()
+        try:
+            cur.execute(sql, codes)
+            row = cur.fetchone()
+            if not row or row[0] is None:
+                raise SystemExit("Unable to determine max year for selected scope")
+            return min_year, int(row[0])
+        finally:
+            cur.close()
 
     codes = [str(x["league_code"]) for x in league_meta]
     if not codes:
