@@ -134,6 +134,9 @@ This document provides a step-by-step workflow and best practices to efficiently
 - **Default data-source policy: unless the user explicitly asks for local-only analysis, verify local data freshness against API data before answering.**
   - If local data is behind, run or propose the minimal sync needed before producing final results.
   - If the user explicitly says local-only, do not call the API and clearly label results as local-data-only.
+- **Historical-era coverage rule (mandatory): do not guess when source scope cannot cover the era.**
+  - If the requested player/team era is outside DB/API coverage (for example many 1970s-1980s player queries), explicitly return that no supported answer is available from current sources.
+  - Do not backfill with unsourced memory when the user requires DB/API-backed answers.
 - **For website-hosted frontends, prefer an HTTP backend wrapper over direct script execution from clients.**
   - Expose stable JSON endpoints and keep DB/API credentials server-side only.
   - External agents should integrate through API contracts, not direct shell access.

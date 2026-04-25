@@ -39,8 +39,8 @@ Schema file:
 
 ## 4) Automation Setup
 Environment file:
-- [ .cron.env](../.cron.env)
-- template: [ .cron.env.example](../.cron.env.example)
+- [.cron.env](../.cron.env)
+- template: [.cron.env.example](../.cron.env.example)
 
 Managed cron jobs:
 - Worker every 5 minutes (with lockfile).
@@ -97,8 +97,8 @@ Default target settings:
 - backup subdir: `mySQL_Backups`
 
 Tune in env file:
-- [ .cron.env](../.cron.env)
-- [ .cron.env.example](../.cron.env.example)
+- [.cron.env](../.cron.env)
+- [.cron.env.example](../.cron.env.example)
 
 Manual test:
 ```bash
@@ -164,8 +164,8 @@ Generated badge-based SVG examples:
 
 ## 12) Handoff Docs
 - Start here for any future agent session:
-  [docs/NEXT_AGENT_START_HERE.md](/home/lpanzieri/Data-Analysis/docs/NEXT_AGENT_START_HERE.md)
+  [docs/NEXT_AGENT_START_HERE.md](NEXT_AGENT_START_HERE.md)
 - Windows restart handoff for current API-Football ingestion work:
-  [docs/WINDOWS_AGENT_HANDOFF_20260425.md](/home/lpanzieri/Data-Analysis/docs/WINDOWS_AGENT_HANDOFF_20260425.md)
+  [docs/WINDOWS_AGENT_HANDOFF_20260425.md](WINDOWS_AGENT_HANDOFF_20260425.md)
 - Linux restart handoff for current API-Football ingestion work:
-  [docs/LINUX_AGENT_HANDOFF_20260425.md](/home/lpanzieri/Data-Analysis/docs/LINUX_AGENT_HANDOFF_20260425.md)
+  [docs/LINUX_AGENT_HANDOFF_20260425.md](LINUX_AGENT_HANDOFF_20260425.md)

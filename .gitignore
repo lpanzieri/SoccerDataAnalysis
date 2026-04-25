@@ -11,3 +11,4 @@ scripts/helpers/generated/*.py
 scripts/helpers/helper_registry.json
 scripts/helpers/unknown_questions.log
 scripts/maintenance/*.last.log
+reports/*.png

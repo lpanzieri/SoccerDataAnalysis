@@ -10,7 +10,7 @@ Use the existing data and helper scripts through a stable HTTP API so a website 
 
 ## New API Bridge
 File:
-- /home/lpanzieri/Data-Analysis/scripts/web/agent_api_server.py
+- [scripts/web/agent_api_server.py](../scripts/web/agent_api_server.py)
 
 Endpoints:
 - GET /health
@@ -70,7 +70,7 @@ Recommended flow from website frontend:
 5. Frontend sends bearer token only to your backend endpoint, never to third-party domains.
 
 Reference frontend snippet:
-- /home/lpanzieri/Data-Analysis/docs/examples/frontend_question_client.html
+- [docs/examples/frontend_question_client.html](examples/frontend_question_client.html)
 
 ## Security and deployment notes
 - Use AGENT_API_ALLOWED_ORIGIN or --allowed-origin to lock CORS to your frontend domain.

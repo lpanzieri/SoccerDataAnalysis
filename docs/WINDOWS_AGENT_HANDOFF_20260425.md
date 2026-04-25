@@ -18,7 +18,7 @@ Focus so far:
 
 ## Important Current Behavior
 The sync script is:
-- [sync_api_football_events.py](/home/lpanzieri/Data-Analysis/sync_api_football_events.py)
+- [sync_api_football_events.py](../sync_api_football_events.py)
 
 Relevant implemented behavior already in the code:
 - `--season-count N` resolves the window from API current season metadata when available
@@ -50,7 +50,7 @@ On Linux, runtime commands used:
 
 On Windows, another agent should not assume the same shell commands work unchanged.
 The safe approach is:
-1. Read [developing_stage_credentials.txt](/home/lpanzieri/Data-Analysis/developing_stage_credentials.txt) for connection targets and API key source.
+1. Read [developing_stage_credentials.txt](../developing_stage_credentials.txt) for connection targets and API key source.
 2. Prefer environment variables over inline secrets.
 3. Confirm Python environment and MySQL client availability before running sync commands.
 
@@ -310,9 +310,9 @@ Fastest safe resume path:
 4. Only then consider targeted lineup passes.
 
 ## Relevant Files
-- [sync_api_football_events.py](/home/lpanzieri/Data-Analysis/sync_api_football_events.py)
-- [setup_schema.py](/home/lpanzieri/Data-Analysis/setup_schema.py)
-- [schema.sql](/home/lpanzieri/Data-Analysis/schema.sql)
-- [docs/RUNBOOK.md](/home/lpanzieri/Data-Analysis/docs/RUNBOOK.md)
-- [scripts/maintenance/link_historical_to_event_fixtures.py](/home/lpanzieri/Data-Analysis/scripts/maintenance/link_historical_to_event_fixtures.py)
-- [scripts/analysis/generate_goal_heatmap.py](/home/lpanzieri/Data-Analysis/scripts/analysis/generate_goal_heatmap.py)
+- [sync_api_football_events.py](../sync_api_football_events.py)
+- [setup_schema.py](../setup_schema.py)
+- [schema.sql](../schema.sql)
+- [docs/RUNBOOK.md](RUNBOOK.md)
+- [scripts/maintenance/link_historical_to_event_fixtures.py](../scripts/maintenance/link_historical_to_event_fixtures.py)
+- [scripts/analysis/generate_goal_heatmap.py](../scripts/analysis/generate_goal_heatmap.py)

@@ -24,16 +24,16 @@ Leagues in scope during this session:
 - Ligue 1 (`61`)
 
 ## Key Files
-- [sync_api_football_events.py](/home/lpanzieri/Data-Analysis/sync_api_football_events.py)
-- [setup_schema.py](/home/lpanzieri/Data-Analysis/setup_schema.py)
-- [schema.sql](/home/lpanzieri/Data-Analysis/schema.sql)
-- [scripts/maintenance/link_historical_to_event_fixtures.py](/home/lpanzieri/Data-Analysis/scripts/maintenance/link_historical_to_event_fixtures.py)
-- [docs/RUNBOOK.md](/home/lpanzieri/Data-Analysis/docs/RUNBOOK.md)
-- [docs/WINDOWS_AGENT_HANDOFF_20260425.md](/home/lpanzieri/Data-Analysis/docs/WINDOWS_AGENT_HANDOFF_20260425.md)
-- [scripts/analysis/generate_goal_heatmap.py](/home/lpanzieri/Data-Analysis/scripts/analysis/generate_goal_heatmap.py)
+- [sync_api_football_events.py](../sync_api_football_events.py)
+- [setup_schema.py](../setup_schema.py)
+- [schema.sql](../schema.sql)
+- [scripts/maintenance/link_historical_to_event_fixtures.py](../scripts/maintenance/link_historical_to_event_fixtures.py)
+- [docs/RUNBOOK.md](RUNBOOK.md)
+- [docs/WINDOWS_AGENT_HANDOFF_20260425.md](WINDOWS_AGENT_HANDOFF_20260425.md)
+- [scripts/analysis/generate_goal_heatmap.py](../scripts/analysis/generate_goal_heatmap.py)
 
 ## Important Current Script Behavior
-Current sync behavior already implemented in [sync_api_football_events.py](/home/lpanzieri/Data-Analysis/sync_api_football_events.py):
+Current sync behavior already implemented in [sync_api_football_events.py](../sync_api_football_events.py):
 
 - `--season-count` uses API current-season metadata when available
 - event polling is idempotent
