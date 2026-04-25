@@ -13,6 +13,7 @@ This document provides a step-by-step workflow and best practices to efficiently
   - Validation command: `grep -n "def do_GET\|def do_POST\|/health\|/v1/question" scripts/web/agent_api_server.py && test -f docs/openapi/agent_api_openapi.yaml`
 - **Optional CUDA rule (mandatory): preserve CPU-first behavior and safe fallback.**
   - CUDA acceleration must remain optional; default behavior must work without CUDA packages or GPU hardware.
+  - For new compute-heavy paths, default to implementing optional CUDA acceleration with mandatory CPU fallback unless explicitly rejected for technical reasons.
   - Runtime backend selection must support `auto|cpu|cuda`; `auto` must never fail due to missing CUDA dependencies.
   - Current scope: Phase 3 enables CUDA execution for heatmap matrix aggregation in `scripts/analysis/generate_goal_heatmap.py` and ranking/array preparation in `scripts/analysis/generate_top_scorers_report.py`.
   - Validation command: `python - <<'PY'\nfrom scripts.helpers.cuda_runtime import resolve_compute_backend\nprint(resolve_compute_backend('auto', allow_cuda_execution=True))\nprint(resolve_compute_backend('cpu', allow_cuda_execution=True))\nPY`
