@@ -267,6 +267,24 @@ Retry task behavior in worker:
 - retry tasks enable `--max-full-event-backfill-calls` from task budget to re-poll already-known fixtures missing events.
 - stats/lineups/player-stats remain enabled to preserve result->player lockstep.
 
+Overnight major-5 unattended runner:
+```bash
+cd /home/lpanzieri/Data-Analysis
+set -a && source ./.cron.env && set +a
+export BACKFILL_SCOPE=top5_2016_plus
+export BACKFILL_MIN_START_YEAR=2016
+export RESERVE_FLOOR=1000
+export SLEEP_SECONDS=60
+export MAX_RUNTIME_MINUTES=480
+bash /home/lpanzieri/Data-Analysis/scripts/maintenance/run_major5_backfill_overnight.sh
+```
+
+Stop conditions in overnight runner:
+- no pending major-5 tasks in queue
+- API remaining calls <= `RESERVE_FLOOR`
+- optional `MAX_RUNTIME_MINUTES` reached
+- optional `MAX_LOOPS` reached
+
 ## 10) Assets
 Generated badge-based SVG examples:
 - [assets/inter_logo_name_from_db.svg](../assets/inter_logo_name_from_db.svg)
