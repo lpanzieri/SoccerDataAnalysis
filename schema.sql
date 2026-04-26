@@ -341,6 +341,67 @@ CREATE TABLE IF NOT EXISTS backfill_day_log (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS fixture_lineup (
+    lineup_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    provider_fixture_id BIGINT NOT NULL,
+    team_id BIGINT NULL,
+    team_name VARCHAR(128) NULL,
+    formation VARCHAR(16) NULL,
+    coach_id BIGINT NULL,
+    coach_name VARCHAR(128) NULL,
+    raw_json JSON NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_fixture_team_lineup (provider_fixture_id, team_id),
+    KEY idx_fixture_lineup_fixture (provider_fixture_id),
+    KEY idx_fixture_lineup_team (team_id)
+);
+
+CREATE TABLE IF NOT EXISTS fixture_lineup_player (
+    lineup_player_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    lineup_id BIGINT NOT NULL,
+    provider_fixture_id BIGINT NOT NULL,
+    player_id BIGINT NOT NULL,
+    player_name VARCHAR(128) NULL,
+    player_number INT NULL,
+    player_pos VARCHAR(16) NULL,
+    is_starter BOOLEAN NOT NULL DEFAULT TRUE,
+    raw_json JSON NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_lineup_player_lineup FOREIGN KEY (lineup_id) REFERENCES fixture_lineup(lineup_id),
+    CONSTRAINT fk_lineup_player_player FOREIGN KEY (player_id) REFERENCES player_dim(provider_player_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    UNIQUE KEY uq_lineup_player_unique (provider_fixture_id, player_id, is_starter),
+    KEY idx_lineup_player_fixture (provider_fixture_id),
+    KEY idx_lineup_player_player (player_id),
+    KEY idx_lineup_player_starter (is_starter)
+);
+
+CREATE TABLE IF NOT EXISTS player_injury (
+    injury_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    provider_player_id BIGINT NOT NULL,
+    player_name VARCHAR(128) NULL,
+    provider_team_id BIGINT NULL,
+    team_name VARCHAR(128) NULL,
+    fixture_id BIGINT NULL,
+    league_id INT NULL,
+    season_year INT NULL,
+    injury_type VARCHAR(64) NULL,
+    injury_reason VARCHAR(255) NULL,
+    injury_date DATE NULL,
+    return_date DATE NULL,
+    games_missed INT NULL,
+    raw_json JSON NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_player_injury_player FOREIGN KEY (provider_player_id) REFERENCES player_dim(provider_player_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    UNIQUE KEY uq_player_injury_unique (provider_player_id, provider_team_id, league_id, season_year, injury_type, injury_date),
+    KEY idx_injury_player (provider_player_id),
+    KEY idx_injury_team (provider_team_id),
+    KEY idx_injury_fixture (fixture_id),
+    KEY idx_injury_league_season (league_id, season_year),
+    KEY idx_injury_return_date (return_date)
+);
+
 CREATE OR REPLACE VIEW v_event_timeline_normalized AS
 SELECT
     et.event_id,

@@ -78,6 +78,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from scripts.helpers.prediction_html_report import default_report_path, write_prediction_html_report
+
 import mysql.connector
 
 from scripts.helpers.league_records import DBConfig
@@ -104,6 +106,20 @@ _cache_runtime_state: Dict[Tuple[str, int, str, str], Dict[str, Any]] = {}
 
 
 DEFAULT_TEMPLATES = [
+    {
+        "intent": "match_outcome_prediction",
+        "match_phrases": [
+            "predict ",
+            "prediction for ",
+            "who wins ",
+            "forecast ",
+        ],
+        "helper_function": "predict_match_outcome",
+        "requires_league": True,
+        "pass_league_code": True,
+        "kwargs": {},
+        "dynamic_kwargs": ["team_pair_from_question"],
+    },
     {
         "intent": "best_away_record",
         "match_phrases": [
@@ -387,6 +403,23 @@ def _extract_seasons_back(question: str) -> Optional[int]:
     return None
 
 
+def _extract_team_pair(question: str) -> Optional[Tuple[str, str]]:
+    raw = question.strip()
+    patterns = [
+        r"(?:predict(?: the result of)?|prediction for|who wins(?: in)?|forecast(?: for)?)\s+(.+?)\s+(?:vs\.?|versus|v\.?|against)\s+(.+?)(?:\s+in\s+.+)?$",
+        r"^(.+?)\s+(?:vs\.?|versus|v\.?|against)\s+(.+?)(?:\s+in\s+.+)?$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, raw, flags=re.IGNORECASE)
+        if not match:
+            continue
+        home_team = match.group(1).strip(" ?!.,")
+        away_team = match.group(2).strip(" ?!.,")
+        if home_team and away_team:
+            return home_team, away_team
+    return None
+
+
 def _resolve_helper_kwargs(question: str, template: Dict[str, Any]) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     static_kwargs = template.get("kwargs", {})
@@ -401,6 +434,12 @@ def _resolve_helper_kwargs(question: str, template: Dict[str, Any]) -> Dict[str,
         seasons_back = _extract_seasons_back(question)
         if seasons_back is not None:
             out["seasons_back"] = seasons_back
+
+    if "team_pair_from_question" in dynamic:
+        team_pair = _extract_team_pair(question)
+        if team_pair is not None:
+            out["home_team_name"] = team_pair[0]
+            out["away_team_name"] = team_pair[1]
 
     return out
 
@@ -445,12 +484,37 @@ def answer(db):
     return [{"error": "This helper requires a league, but none was inferred from the question."}]
 '''
 
+    if helper_function == "predict_match_outcome" and (
+        not kwargs.get("home_team_name") or not kwargs.get("away_team_name")
+    ):
+        return '''#!/usr/bin/env python3
+def answer(db):
+    return [{"error": "Could not infer both team names from the question. Try phrasing it like: predict Torino vs Inter in Serie A."}]
+    '''
+
     args = ["db=db"]
     if pass_league_code:
         args.append(f"league_code={league_code!r}")
     for k, v in kwargs.items():
         args.append(f"{k}={v!r}")
     args_str = ", ".join(args)
+
+    if helper_function == "predict_match_outcome":
+        return f'''#!/usr/bin/env python3
+from pathlib import Path
+
+from scripts.helpers.league_records import {helper_function}
+from scripts.helpers.prediction_html_report import default_report_path, write_prediction_html_report
+
+
+def answer(db):
+    result = {helper_function}({args_str})
+    root = Path(__file__).resolve().parents[3]
+    report_path = default_report_path(result, root / "plans/reports/predictions")
+    written_path = write_prediction_html_report(result, report_path)
+    result["html_report_path"] = str(written_path)
+    return result
+'''
 
     return f'''#!/usr/bin/env python3
 from scripts.helpers.league_records import {helper_function}
@@ -930,6 +994,30 @@ def _to_json_safe(value: Any) -> Any:
     return str(value)
 
 
+def _ensure_prediction_report(rows: Any) -> Any:
+    root = Path(__file__).resolve().parents[2]
+
+    def attach(item: Any) -> Any:
+        if not isinstance(item, dict):
+            return item
+        if not all(key in item for key in ("home_team", "away_team", "prediction")):
+            return item
+        current_path = item.get("html_report_path")
+        if isinstance(current_path, str) and current_path.strip() and Path(current_path).exists():
+            return item
+
+        report_path = default_report_path(item, root / "plans/reports/predictions")
+        written_path = write_prediction_html_report(item, report_path)
+        item["html_report_path"] = str(written_path)
+        return item
+
+    if isinstance(rows, dict):
+        return attach(rows)
+    if isinstance(rows, list):
+        return [attach(item) for item in rows]
+    return rows
+
+
 def answer_question_with_helpers(
     question: str,
     db: DBConfig,
@@ -980,6 +1068,8 @@ def answer_question_with_helpers(
                         "meta": cached_rows[0] if isinstance(cached_rows, list) and cached_rows else (cached_rows if isinstance(cached_rows, dict) else {}),
                     }
                 # Otherwise, return as usual
+                if resolved.intent == "match_outcome_prediction":
+                    cached_rows = _ensure_prediction_report(cached_rows)
                 return {
                     "helper_key": resolved.helper_key,
                     "intent": resolved.intent,
@@ -1051,6 +1141,9 @@ def answer_question_with_helpers(
 
     answer_fn = _load_answer_callable(resolved.helper_file)
     rows = _to_json_safe(answer_fn(db))
+
+    if resolved.intent == "match_outcome_prediction":
+        rows = _ensure_prediction_report(rows)
 
     if use_cache:
         _set_cached_rows(

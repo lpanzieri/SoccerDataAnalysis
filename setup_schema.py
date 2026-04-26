@@ -94,6 +94,112 @@ def run_migrations(conn):
         cur.close()
 
 
+def _has_foreign_key_constraint(conn, table_name: str, constraint_name: str) -> bool:
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT 1
+            FROM information_schema.TABLE_CONSTRAINTS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = %s
+              AND CONSTRAINT_NAME = %s
+              AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+            LIMIT 1
+            """,
+            (table_name, constraint_name),
+        )
+        return cur.fetchone() is not None
+    finally:
+        cur.close()
+
+
+def _count_player_orphans(conn, table_name: str, player_col: str) -> int:
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM {table_name} t
+            LEFT JOIN player_dim pd ON pd.provider_player_id = t.{player_col}
+            WHERE pd.provider_player_id IS NULL
+            """
+        )
+        row = cur.fetchone()
+        return int(row[0] if row else 0)
+    finally:
+        cur.close()
+
+
+def enforce_player_integrity(conn):
+    """Backfill missing player_dim rows and enforce foreign keys for player references."""
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO player_dim (provider_player_id, player_name)
+            SELECT
+                pi.provider_player_id,
+                COALESCE(NULLIF(MAX(pi.player_name), ''), CONCAT('player_', pi.provider_player_id))
+            FROM player_injury pi
+            LEFT JOIN player_dim pd ON pd.provider_player_id = pi.provider_player_id
+            WHERE pd.provider_player_id IS NULL
+            GROUP BY pi.provider_player_id
+            """
+        )
+
+        cur.execute(
+            """
+            INSERT INTO player_dim (provider_player_id, player_name)
+            SELECT
+                flp.player_id,
+                COALESCE(NULLIF(MAX(flp.player_name), ''), CONCAT('player_', flp.player_id))
+            FROM fixture_lineup_player flp
+            LEFT JOIN player_dim pd ON pd.provider_player_id = flp.player_id
+            WHERE pd.provider_player_id IS NULL
+            GROUP BY flp.player_id
+            """
+        )
+    finally:
+        cur.close()
+
+    orphan_injury = _count_player_orphans(conn, "player_injury", "provider_player_id")
+    orphan_lineup = _count_player_orphans(conn, "fixture_lineup_player", "player_id")
+    if orphan_injury > 0 or orphan_lineup > 0:
+        raise RuntimeError(
+            "Player integrity migration blocked: unresolved orphans remain "
+            f"(player_injury={orphan_injury}, fixture_lineup_player={orphan_lineup})"
+        )
+
+    cur = conn.cursor()
+    try:
+        if not _has_foreign_key_constraint(conn, "player_injury", "fk_player_injury_player"):
+            cur.execute(
+                """
+                ALTER TABLE player_injury
+                ADD CONSTRAINT fk_player_injury_player
+                FOREIGN KEY (provider_player_id)
+                REFERENCES player_dim(provider_player_id)
+                ON UPDATE CASCADE
+                ON DELETE RESTRICT
+                """
+            )
+
+        if not _has_foreign_key_constraint(conn, "fixture_lineup_player", "fk_lineup_player_player"):
+            cur.execute(
+                """
+                ALTER TABLE fixture_lineup_player
+                ADD CONSTRAINT fk_lineup_player_player
+                FOREIGN KEY (player_id)
+                REFERENCES player_dim(provider_player_id)
+                ON UPDATE CASCADE
+                ON DELETE RESTRICT
+                """
+            )
+    finally:
+        cur.close()
+
+
 def validate_required_tables(conn):
     required_tables = {
         "league",
@@ -119,6 +225,9 @@ def validate_required_tables(conn):
         "team_name_alias",
         "backfill_task",
         "backfill_day_log",
+        "fixture_lineup",
+        "fixture_lineup_player",
+        "player_injury",
     }
     cur = conn.cursor()
     try:
@@ -142,6 +251,7 @@ def main():
     try:
         run_schema_sql(conn, schema_path)
         run_migrations(conn)
+        enforce_player_integrity(conn)
         validate_required_tables(conn)
         conn.commit()
         print("Schema setup/migration completed successfully.")
