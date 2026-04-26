@@ -38,6 +38,28 @@ Initial interpretation:
 
 ## Execution Log
 
+### Post-Merge Summary (2026-04-26 08:35 UTC)
+
+**Merged to main:**
+- Branch: `opt/task-10-sync-batching`
+  - Commit message: "Merge opt/task-10: Reduce cursor churn and batch write operations in sync flow"
+  - Rationale: Smoke tests passed; no scheduler impact; safe for production deployment
+  
+- Branch: `opt/task-11-adaptive-throttle`
+  - Commit message: "Merge opt/task-11: Replace fixed sleep pacing with adaptive throttling"
+  - Rationale: Smoke tests passed; header-aware throttling with fallback; only affects sync pacing, not queue logic
+
+**Validation completed before merge:**
+- Task 10: Syntax ✓, Smoke run ✓, Idempotency preserved ✓
+- Task 11: Syntax ✓, Smoke run ✓, CLI escape hatches available ✓
+
+**Next steps:**
+- Monitor sync performance on next active backfill run (Ligue 1 2025, 2024, 2023 per priority order)
+- Measure throughput improvements vs baseline during production use
+- If regressions observed, revert via: `git revert -m 1 <commit-hash>`
+
+---
+
 ### Task 11 - Replace fixed sleep pacing with adaptive throttling
 
 - Branch: `opt/task-11-adaptive-throttle`
@@ -333,20 +355,24 @@ Initial interpretation:
 
 ## Tracking Template
 
-Completed:
-- [x] Task 2
-- [x] Task 4
-- [x] Task 6
-- [x] Task 7
-- [x] Task 8
-- [x] Task 9
+**Merge Status (2026-04-26 08:35 UTC):**
+- ✅ Main branch merged: Tasks 2, 4, 6, 7, 8, 9, 10, 11, 12, 13
+- ⏳ Pending: Tasks 1, 3, 5, 14
 
-Remaining:
-- [ ] Task 1
-- [ ] Task 3
-- [ ] Task 5
-- [~] Task 10 (code complete, smoke benchmark done, throughput delta pending workload)
-- [~] Task 11 (code complete, benchmark done, throughput delta pending workload)
-- [ ] Task 12
-- [ ] Task 13
-- [ ] Task 14
+Completed & Merged:
+- [x] Task 2 (batched goals query)
+- [x] Task 4 (single render)
+- [x] Task 6 (loader TTL cache)
+- [x] Task 7 (cache hot path)
+- [x] Task 8 (light freshness)
+- [x] Task 9 (async refresh trigger)
+- [x] Task 10 (sync batching) — merged 2026-04-26
+- [x] Task 11 (adaptive throttle) — merged 2026-04-26
+- [x] Task 12 (DB explain indexes)
+- [x] Task 13 (regression pass)
+
+Not Yet Started:
+- [ ] Task 1 (baseline measurement)
+- [ ] Task 3 (cache schema checks)
+- [ ] Task 5 (badge decode optimization)
+- [ ] Task 14 (final documentation)
