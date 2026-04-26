@@ -96,13 +96,17 @@ When another agent resumes on Linux, do this first:
 5. Check recent 429 timestamps in `event_api_call_log`
 6. If rate pressure is recent, wait before retrying
 
-Schema validation command:
+**Note**: As of 2026-04-26, demo/benchmark scripts have been archived to `archive/` for cleanliness. Production automation remains unchanged. See [archive/README.md](../../archive/README.md) for details.
+
+Schema validation command (now includes player integrity migration):
 
 ```bash
 cd /home/lpanzieri/Data-Analysis && \
 set -a && source ./.cron.env && set +a && \
 conda run -p /home/lpanzieri/Data-Analysis/.conda --no-capture-output python setup_schema.py
 ```
+
+Note: `setup_schema.py` now also enforces player referential integrity by backfilling missing `player_dim` rows and ensuring foreign keys on `player_injury.provider_player_id` and `fixture_lineup_player.player_id`.
 
 ## Current Data State
 This section reflects the last confirmed DB snapshot from this session.

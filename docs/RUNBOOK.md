@@ -154,7 +154,26 @@ Generated badge-based SVG examples:
 - [assets/inter_logo_name_from_db.svg](../assets/inter_logo_name_from_db.svg)
 - [assets/juventus_logo_name_from_db.svg](../assets/juventus_logo_name_from_db.svg)
 
-## 11) Next Steps
+## 11) Code Cleanup & Archival
+As of **2026-04-26**, the following non-production code was archived for maintainability:
+
+**Archived to `archive/` (still in git history):**
+- Demo scripts: `run_league_records_example.py`, `run_dynamic_helper.py`, `save_league_positions_graph.py`
+- Benchmark templates: `run_injury_weight_sweep.py` (tuning completed; final injury-weight defaults locked in production)
+- Maintenance utilities: `evaluate_match_predictions.py`, `generate_*_html_report.py`, `refresh_team_name_normalization.py`
+- Benchmark outputs: `helper_benchmark_*.json`, `sync_benchmark_*.log`, task regression files
+- Generated code & state: `scripts/helpers/generated/`, `intent_templates.json`, `unknown_questions.log`, `refresh_queue.jsonl`
+
+See [archive/README.md](../../archive/README.md) for archival rationale and restore instructions.
+
+**Deleted (permanent):**
+- Secrets file: `developing_stage_credentials.txt` (gitignored, not tracked)
+- Empty folders: `images/`, `generated_graphs/`, `reports/`
+
+**Production scripts remain unchanged:**
+- Worker automation, sync/link pipelines, helper dispatch, health monitoring, DB backups all fully operational.
+
+## 12) Next Steps
 - Upgrade the API-Football plan and verify expanded season access.
 - Rebuild the mapping-only queue for the new allowed season window and re-initialize the tracker.
 - Complete or verify league-code to API league-id mappings to reduce blocked tasks.
