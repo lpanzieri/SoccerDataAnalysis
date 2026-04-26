@@ -11,3 +11,6 @@ scripts/helpers/generated/*.py
 scripts/helpers/helper_registry.json
 scripts/helpers/unknown_questions.log
 scripts/maintenance/*.last.log
+WORKFLOW.md
+HANDOFF_LINUX_AGENT.md
+OPTIMIZATION_EXECUTION_CHECKLIST.md
