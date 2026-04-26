@@ -116,6 +116,7 @@ This document provides a step-by-step workflow and best practices to efficiently
   - Ensure `infer_league_code` cannot parse common non-code tokens.
 - **If the helper output causes a crash:**
   - Patch the code to normalize outputs to a list of dicts.
+  - If the helper registry points to a generated file that no longer exists, regenerate the helper from the current template and update the registry entry instead of failing at import time.
 - **If the cache is not updated or used:**
   - Check the cache key logic and table schema.
   - Ensure `latest_data_timestamp` is extracted correctly.

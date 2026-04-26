@@ -475,6 +475,28 @@ def _append_unknown_question(question: str, league_code: Optional[str]) -> None:
         f.write(line + "\n")
 
 
+def _write_generated_helper(
+    *,
+    helper_file: Path,
+    intent: str,
+    template: Optional[Dict[str, Any]],
+    league_code: Optional[str],
+    helper_kwargs: Optional[Dict[str, Any]],
+    question: str,
+) -> None:
+    helper_file.parent.mkdir(parents=True, exist_ok=True)
+    helper_file.write_text(
+        _render_helper_file(
+            intent=intent,
+            template=template,
+            league_code=league_code,
+            helper_kwargs=helper_kwargs,
+            question=question,
+        ),
+        encoding="utf-8",
+    )
+
+
 def _connect_db(db: DBConfig):
     return mysql.connector.connect(
         host=db.host,
@@ -819,9 +841,25 @@ def ensure_helper_for_question(question: str) -> HelperResolution:
 
     registry = _load_registry()
     entry = registry.get(key)
+    canonical_helper_file = GENERATED_DIR / _generated_filename(intent, league_code, helper_kwargs)
 
     if entry:
         helper_file = Path(entry["helper_file"])
+        if not helper_file.exists():
+            helper_file = canonical_helper_file
+            _write_generated_helper(
+                helper_file=helper_file,
+                intent=intent,
+                template=template,
+                league_code=league_code,
+                helper_kwargs=helper_kwargs,
+                question=question,
+            )
+            entry["helper_file"] = str(helper_file)
+            entry["source_question_example"] = question
+            entry["template_present"] = template is not None
+            entry["helper_kwargs"] = helper_kwargs
+            _save_registry(registry)
         return HelperResolution(
             helper_key=key,
             intent=intent,
@@ -830,16 +868,14 @@ def ensure_helper_for_question(question: str) -> HelperResolution:
             created=False,
         )
 
-    helper_file = GENERATED_DIR / _generated_filename(intent, league_code, helper_kwargs)
-    helper_file.write_text(
-        _render_helper_file(
-            intent=intent,
-            template=template,
-            league_code=league_code,
-            helper_kwargs=helper_kwargs,
-            question=question,
-        ),
-        encoding="utf-8",
+    helper_file = canonical_helper_file
+    _write_generated_helper(
+        helper_file=helper_file,
+        intent=intent,
+        template=template,
+        league_code=league_code,
+        helper_kwargs=helper_kwargs,
+        question=question,
     )
 
     if intent == "unknown":

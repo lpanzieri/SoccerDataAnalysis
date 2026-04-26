@@ -431,12 +431,27 @@ Not Implemented (Deferred as Lower Priority):
 - Adaptive throttling improves throughput on rate-limited APIs (Task 11 — ✅ merged)
 - Throughput gains pending validation during next backfill run
 
+### Post-Merge Validation Snapshot (2026-04-26)
+- Hotfix branch: `opt/task-15-regenerate-missing-generated-helpers`
+- Root cause fixed: stale helper registry entries no longer crash execution when generated helper files are missing; files are regenerated automatically.
+- Sanity checks passed:
+  - `graphical_goals_comparison` → `image=True`, `base64_image=True`, `team_badges=4`, cache hit ✓
+  - `best_away_record` → tabular response with `rows=1`, cache hit ✓
+- Quick cache-on benchmark:
+  - Report: `benchmarks/helper_benchmark_20260426_085816.json`
+  - `p50`: 23.17 ms
+  - `p95`: 24.22 ms
+  - avg DB execute calls/run: 3
+  - cache hit rate: 1.0
+
 ## Handoff Checklist (Linux Agent)
 
 ### Immediate
-- [ ] Push merged main to origin
-- [ ] Run sanity check on recent merge commits: `git log --oneline main | head -20`
+- [x] Push merged main to origin
+- [x] Run sanity check on recent merge commits: `git log --oneline main | head -20`
 - [ ] Verify no tracked uncommitted changes: `git status`
+- [x] Run compact post-merge helper sanity checks
+- [x] Run quick post-merge cache-on benchmark
 
 ### Pre-Deployment Verification:
 - [ ] Run sanity check on all 14 merged commits: `git log --oneline main | head -20`

@@ -6,6 +6,11 @@ Optimization merge work is complete. All optimization branches `opt/task-2` thro
 Implemented tasks now on `main`:
 - Task 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
 
+Post-merge stabilization:
+- Task 15 hotfix branch `opt/task-15-regenerate-missing-generated-helpers` repairs stale helper-registry entries by regenerating missing generated helper files on demand.
+- Post-merge sanity checks passed for one graphical and one tabular helper intent.
+- Quick cache-on benchmark after merge: p50 23.17 ms, p95 24.22 ms, avg DB execute calls 3.
+
 Deferred / already covered:
 - Task 1 was skipped because the baseline snapshot was already captured.
 - Task 5.1 was covered by Task 5 smoke validation.
@@ -104,9 +109,9 @@ Remote branches are preserved for audit trail; safe to prune after validation.
 
 ### Immediate
 
-1. **Push the completed merge set to origin/main.**
-2. **Run post-merge sanity checks.**
-3. **Monitor the next active helper/sync workload for real-world validation.**
+1. **Monitor the next active helper/sync workload for real-world validation.**
+2. **Decide whether to keep or prune merged local branches.**
+3. **Keep the Task 15 hotfix branch until its merge is confirmed in production.**
 
 ### Post-Merge Validation
 
@@ -119,11 +124,10 @@ Remote branches are preserved for audit trail; safe to prune after validation.
 
 2. **Quick sanity check on helpers:**
    ```bash
-   # Run single graphical helper request with cache disabled
-   python scripts/helpers/run_dynamic_helper.py \
-     --intent graphical_goals_comparison \
-     --query "goals scored by juventus last 5 years"
-   # Should complete in ~200-300ms (without cache) or <100ms (with cache)
+    # Post-merge validation already passed on:
+    # - graphical_goals_comparison
+    # - best_away_record
+    # Quick benchmark result: p95 ~= 24.22ms with cache hits
    ```
 
 3. **Monitor sync status:**
@@ -171,24 +175,23 @@ Remote branches are preserved for audit trail; safe to prune after validation.
 - **Fallback pacing:** Used when rate-limit headers unavailable
 - **Batching:** Task 10 reduces write operations; no CLI configuration needed
 
-### Helper Improvements (Tasks 3, 5 - Already Live)
+### Helper Improvements (Merged)
 - **Schema cache:** Automatic; caches per table.column indefinitely during process lifetime
 - **Badge cache:** Automatic; max 50 entries with LRU eviction
-- **Expected improvement:** Minimal from Tasks 3, 5 alone; full gains unlock with Tasks 2, 4, 6, 7, 8, 9
+- **Loader TTL cache:** Configurable with `HELPER_LOADER_CACHE_TTL_SECONDS`
+- **Freshness strategy:** Configurable with `HELPER_CACHE_FRESHNESS_SECONDS`
+- **Async refresh queue:** stale cache responses can enqueue refresh work to `scripts/helpers/refresh_queue.jsonl`
+- **Stale-helper recovery:** missing generated helper files are regenerated automatically from the registry/template state
 
-### For Pending Implementations
-- **Cache TTL:** Will be configurable via env vars once Tasks 6-8 merged
-- **Freshness strategy:** Task 8 will enable stale-mark behavior (pending merge)
-- **Async refresh:** Task 9 will queue refresh requests (pending merge)
+## Monitoring & Alerts
 
-## Monitoring & Alerts (For Current Merged Tasks)
+### Current Baseline After Full Merge
+- Helper p95 (cache ON baseline before optimization): 741.79ms
+- Quick post-merge helper p95 (cache ON validation sample): 24.22ms
+- Helper DB execute calls per run: 57 baseline -> 3 in quick cache-hit validation sample
+- Sync throughput: still pending active workload validation
 
-### Current Baseline (Before All 14 Tasks Complete)
-- Helper p95 (cache ON): 741.79ms (Tasks 3, 5 alone provide minimal improvement)
-- Helper p95 (cache OFF): 365.54ms (unchanged by Tasks 3, 5)
-- Sync throughput: Baseline from Task 10/11 implementations (pending active workload validation)
-
-### Alerts to Monitor (Existing 5 Merged Tasks)
+### Alerts to Monitor
 1. **Sync error rate:** Alert if error count increases > 10% vs prior baseline
    - Tasks 10, 11 should not increase errors; alert indicates regression
 
@@ -199,11 +202,11 @@ Remote branches are preserved for audit trail; safe to prune after validation.
    - Task 3 should eliminate repeated schema checks
    - Alert if queries increase unexpectedly
 
-### Expected State After All 14 Tasks Merged
-- Helper latency improvements: 45-89% (depending on cache state)
-- DB call reductions: 80-90%
-- Sync throughput improvements: Validates during active backfill
-- Full monitoring dashboard setup documented in post-merge checklist
+### Current Expected State
+- Helper latency improvements are now present in `main`; validate them under production traffic
+- DB call reductions are now present in `main`; validate them under production traffic
+- Sync throughput improvements still need active backfill confirmation
+- Full monitoring dashboard setup remains a next operational step
 
 ## Rollback Instructions
 
