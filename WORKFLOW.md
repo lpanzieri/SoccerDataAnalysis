@@ -44,6 +44,9 @@ This document provides a step-by-step workflow and best practices to efficiently
 - **When changing code:**
   - Run all relevant scripts with a test question to ensure no exceptions are raised.
   - Check that the output type matches what the cache expects (list of dicts).
+- **For season-by-team chart helpers, batch aggregations instead of looping per season/team.**
+  - The goals comparison helper should use one aggregate query across all requested seasons and tracked teams, not one query per team per season.
+  - Validate with `scripts/maintenance/benchmark_helpers.py` and keep DB execute counts in low single digits for the uncached path.
 
 ## 2.1 Graphical Helper Output Contract
 

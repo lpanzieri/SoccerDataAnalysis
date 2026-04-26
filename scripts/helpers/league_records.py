@@ -227,33 +227,57 @@ def plot_goals_comparison(
       team_ids[name] = row["team_id"] if row else None
       team_badges[name] = row["badge_ref"] if row else None
 
-    team_goals = {name: [] for name in team_names}
-    for season in seasons:
-      season_id = season["season_id"]
-      for name in team_names:
-        tid = team_ids.get(name)
-        if not tid:
-          team_goals[name].append(0)
-          continue
-        cur.execute(
-          """
-          SELECT SUM(
-            CASE
-              WHEN m.home_team_id = %s THEN COALESCE(m.ft_home_goals, 0)
-              WHEN m.away_team_id = %s THEN COALESCE(m.ft_away_goals, 0)
-              ELSE 0
-            END
-          ) AS goals
+    team_goals = {name: [0] * len(seasons) for name in team_names}
+    tracked_team_ids = [team_id for team_id in team_ids.values() if team_id is not None]
+    if seasons and tracked_team_ids:
+      season_ids = [season["season_id"] for season in seasons]
+      season_index = {season_id: idx for idx, season_id in enumerate(season_ids)}
+      team_lookup = {team_id: name for name, team_id in team_ids.items() if team_id is not None}
+      season_placeholders = ", ".join(["%s"] * len(season_ids))
+      team_placeholders = ", ".join(["%s"] * len(tracked_team_ids))
+      goals_query = f"""
+        WITH grouped_goals AS (
+          SELECT
+            m.season_id,
+            m.home_team_id AS team_id,
+            COALESCE(m.ft_home_goals, 0) AS goals
           FROM match_game m
           JOIN league l ON l.league_id = m.league_id
-          WHERE m.season_id = %s
-            AND l.league_code = %s
-            AND (m.home_team_id = %s OR m.away_team_id = %s)
-          """,
-          (tid, tid, season_id, league_code, tid, tid),
+          WHERE l.league_code = %s
+            AND m.season_id IN ({season_placeholders})
+            AND m.home_team_id IN ({team_placeholders})
+
+          UNION ALL
+
+          SELECT
+            m.season_id,
+            m.away_team_id AS team_id,
+            COALESCE(m.ft_away_goals, 0) AS goals
+          FROM match_game m
+          JOIN league l ON l.league_id = m.league_id
+          WHERE l.league_code = %s
+            AND m.season_id IN ({season_placeholders})
+            AND m.away_team_id IN ({team_placeholders})
         )
-        row = cur.fetchone()
-        team_goals[name].append(row["goals"] if row and row["goals"] is not None else 0)
+        SELECT season_id, team_id, SUM(goals) AS goals
+        FROM grouped_goals
+        GROUP BY season_id, team_id
+      """
+      query_params = (
+        [league_code]
+        + season_ids
+        + tracked_team_ids
+        + [league_code]
+        + season_ids
+        + tracked_team_ids
+      )
+      cur.execute(goals_query, query_params)
+      for row in cur.fetchall():
+        team_name = team_lookup.get(row["team_id"])
+        season_idx = season_index.get(row["season_id"])
+        if team_name is None or season_idx is None:
+          continue
+        team_goals[team_name][season_idx] = row["goals"] if row["goals"] is not None else 0
 
     plt.figure(figsize=(12, 7))
     lines = {}
