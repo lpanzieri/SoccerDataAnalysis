@@ -8,10 +8,6 @@ def fetch_and_insert_missing_data_from_api(db: DBConfig, league_code: str, from_
     """
     import os
     import mysql.connector
-<<<<<<< HEAD
-=======
-    from datetime import datetime
->>>>>>> opt/task-7-cache-hot-path
     from sync_api_football_events import sync_fixtures
 
     api_key = os.getenv("APIFOOTBALL_KEY", "")
@@ -99,6 +95,7 @@ REFRESH_TRIGGER_COOLDOWN_SECONDS = 300
 LOADER_CACHE_TTL_SECONDS = 30.0
 CACHE_PRUNE_INTERVAL_SECONDS = 300.0
 CACHE_PRUNE_LIMIT = 200
+CACHE_FRESHNESS_SECONDS = 21600
 
 
 _recent_refresh_triggers: Dict[str, float] = {}
@@ -627,6 +624,54 @@ def _to_date_string(value: Any) -> Optional[str]:
     return text[:10]
 
 
+def _cache_freshness_seconds() -> int:
+    raw = os.getenv("HELPER_CACHE_FRESHNESS_SECONDS")
+    if raw is None:
+        return CACHE_FRESHNESS_SECONDS
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return CACHE_FRESHNESS_SECONDS
+
+
+def _normalize_timestamp(value: Any) -> Optional[datetime]:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        if value.tzinfo is not None:
+            return value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        # Support date-only and common datetime strings returned by mysql/json payloads.
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(text[:19], fmt)
+            except ValueError:
+                continue
+    return None
+
+
+def _is_cache_fresh(latest_data_timestamp: Any) -> bool:
+    freshness_seconds = _cache_freshness_seconds()
+    if freshness_seconds == 0:
+        return False
+    normalized_ts = _normalize_timestamp(latest_data_timestamp)
+    if normalized_ts is None:
+        return False
+    age_seconds = (datetime.utcnow() - normalized_ts).total_seconds()
+    return age_seconds <= freshness_seconds
+
+
+def _timestamp_to_date_string(value: Any) -> Optional[str]:
+    normalized_ts = _normalize_timestamp(value)
+    if normalized_ts is None:
+        return None
+    return normalized_ts.strftime("%Y-%m-%d")
+
+
 def _prune_expired_cache(db: DBConfig, limit: int = 200) -> None:
     conn = _connect_db(db)
     cur = conn.cursor()
@@ -874,31 +919,10 @@ def answer_question_with_helpers(
             cached_rows = cached["rows"]
             cached_latest_ts = cached.get("latest_data_timestamp")
 
-            # Query the DB for the latest match date for this intent/league
-            def get_latest_db_match_date(db, league_code=None):
-                conn = _connect_db(db)
-                cur = conn.cursor()
-                try:
-                    if league_code:
-                        cur.execute(
-                            "SELECT MAX(match_date) FROM match_game m JOIN league l ON l.league_id = m.league_id WHERE l.league_code = %s",
-                            (league_code,)
-                        )
-                    else:
-                        cur.execute("SELECT MAX(match_date) FROM match_game")
-                    row = cur.fetchone()
-                    return row[0].strftime("%Y-%m-%d") if row and row[0] else None
-                finally:
-                    cur.close()
-                    conn.close()
+            cached_latest_date = _timestamp_to_date_string(cached_latest_ts)
 
-            db_latest_ts = get_latest_db_match_date(db, resolved.league_code)
-            cached_latest_date = _to_date_string(cached_latest_ts)
-            db_latest_date = _to_date_string(db_latest_ts)
-            today_str = datetime.now().strftime("%Y-%m-%d")
-
-            # If cache is up to date (latest data in DB is today), return as usual
-            if cached_latest_date and db_latest_date and cached_latest_date >= today_str and db_latest_date >= today_str:
+            # Lighter freshness strategy: trust cached latest_data_timestamp inside a TTL window.
+            if _is_cache_fresh(cached_latest_ts):
                 # If this is a graphical answer, return image data at top-level.
                 if resolved.intent.startswith("graphical_"):
                     return {
@@ -913,7 +937,7 @@ def answer_question_with_helpers(
                             "ttl_seconds": cache_ttl_seconds,
                             "cache_key": cache_key,
                             "fresh": True,
-                            "latest_data_timestamp": cached_latest_date,
+                            "latest_data_timestamp": _timestamp_to_date_string(cached_latest_ts),
                         },
                         "image": cached_rows[0]["image_path"] if isinstance(cached_rows, list) and cached_rows and "image_path" in cached_rows[0] else (cached_rows["image_path"] if isinstance(cached_rows, dict) and "image_path" in cached_rows else None),
                         "base64_image": cached_rows[0]["base64_image"] if isinstance(cached_rows, list) and cached_rows and "base64_image" in cached_rows[0] else (cached_rows["base64_image"] if isinstance(cached_rows, dict) and "base64_image" in cached_rows else None),
@@ -932,11 +956,14 @@ def answer_question_with_helpers(
                         "ttl_seconds": cache_ttl_seconds,
                         "cache_key": cache_key,
                         "fresh": True,
-                        "latest_data_timestamp": cached_latest_date,
+                        "latest_data_timestamp": _timestamp_to_date_string(cached_latest_ts),
                     },
                     "rows": cached_rows,
                 }
-            refresh_from_date = db_latest_date or "2000-01-01"
+
+            # Otherwise, treat the cache as stale and enqueue an async refresh.
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            refresh_from_date = cached_latest_date or "2000-01-01"
             refresh_queued = _enqueue_refresh_request(
                 question=question,
                 helper_key=resolved.helper_key,
