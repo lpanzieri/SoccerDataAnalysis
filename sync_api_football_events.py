@@ -56,6 +56,17 @@ def parse_args():
     )
     p.add_argument("--sleep-seconds", type=float, default=1.5)
     p.add_argument(
+        "--disable-adaptive-throttle",
+        action="store_true",
+        help="Disable header-aware throttling and use fixed --sleep-seconds pacing only.",
+    )
+    p.add_argument(
+        "--adaptive-throttle-max-seconds",
+        type=float,
+        default=8.0,
+        help="Upper bound for adaptive inter-request delay.",
+    )
+    p.add_argument(
         "--skip-fixture-refresh",
         action="store_true",
         help="Skip /fixtures call and work only on already-present event_fixture rows",
@@ -457,9 +468,100 @@ def payload_plan_error(payload: Dict) -> Optional[str]:
     return None
 
 
+def _header_value(headers: Dict[str, str], name: str) -> Optional[str]:
+    wanted = name.lower()
+    for k, v in headers.items():
+        if str(k).lower() == wanted:
+            return str(v)
+    return None
+
+
+def _header_int(headers: Dict[str, str], names: List[str]) -> Optional[int]:
+    for name in names:
+        raw = _header_value(headers, name)
+        if raw is None:
+            continue
+        token = raw.strip()
+        if not token:
+            continue
+        try:
+            return int(float(token))
+        except ValueError:
+            continue
+    return None
+
+
+def compute_adaptive_throttle_seconds(
+    headers: Dict[str, str],
+    calls_left: int,
+    sleep_seconds: float,
+    max_sleep_seconds: float,
+) -> float:
+    base = max(0.0, sleep_seconds)
+    cap = max(0.0, max_sleep_seconds)
+
+    remaining = _header_int(headers, ["x-ratelimit-requests-remaining"])
+    limit = _header_int(
+        headers,
+        ["x-ratelimit-requests-limit", "x-ratelimit-limit", "x-ratelimit-requests"],
+    )
+    reset_epoch = _header_int(headers, ["x-ratelimit-requests-reset", "x-ratelimit-reset"])
+
+    if remaining is None:
+        return min(base, cap) if cap > 0 else base
+
+    if remaining <= 1:
+        emergency = max(base, 5.0)
+        return min(emergency, cap) if cap > 0 else emergency
+
+    delay = base
+
+    if reset_epoch is not None:
+        now_epoch = int(time.time())
+        seconds_until_reset = max(1, reset_epoch - now_epoch)
+        delay = seconds_until_reset / max(1, remaining)
+    elif limit is not None and limit > 0:
+        ratio = remaining / float(limit)
+        if ratio >= 0.5:
+            delay = 0.0
+        elif ratio >= 0.25:
+            delay = base * 0.5
+        elif ratio >= 0.1:
+            delay = base
+        else:
+            delay = max(base * 2.0, 1.0)
+    elif calls_left > 0:
+        pressure = calls_left / float(max(1, remaining))
+        delay = base * min(3.0, max(0.5, pressure))
+
+    if cap > 0:
+        delay = min(delay, cap)
+    return max(0.0, delay)
+
+
+def maybe_sleep_between_requests(
+    headers: Dict[str, str],
+    calls_left: int,
+    sleep_seconds: float,
+    adaptive_throttle: bool,
+    adaptive_throttle_max_seconds: float,
+):
+    if adaptive_throttle:
+        delay = compute_adaptive_throttle_seconds(
+            headers=headers,
+            calls_left=calls_left,
+            sleep_seconds=sleep_seconds,
+            max_sleep_seconds=adaptive_throttle_max_seconds,
+        )
+    else:
+        delay = max(0.0, sleep_seconds)
+
+    if delay > 0:
+        time.sleep(delay)
+
+
 def log_api_call(conn, endpoint: str, params: Dict[str, str], code: int, headers: Dict[str, str]):
-    remaining = headers.get("x-ratelimit-requests-remaining")
-    remaining_int = int(remaining) if remaining and str(remaining).isdigit() else None
+    remaining_int = _header_int(headers, ["x-ratelimit-requests-remaining"])
     cur = conn.cursor()
     try:
         cur.execute(
@@ -560,7 +662,16 @@ def upsert_fixture(conn, fixture_obj: Dict):
         cur.close()
 
 
-def sync_fixtures(conn, api_key: str, league_id: int, season_year: int, calls_left: int, sleep_seconds: float) -> int:
+def sync_fixtures(
+    conn,
+    api_key: str,
+    league_id: int,
+    season_year: int,
+    calls_left: int,
+    sleep_seconds: float,
+    adaptive_throttle: bool,
+    adaptive_throttle_max_seconds: float,
+) -> int:
     if calls_left <= 0:
         return calls_left
 
@@ -589,8 +700,13 @@ def sync_fixtures(conn, api_key: str, league_id: int, season_year: int, calls_le
     for row in payload.get("response", []):
         upsert_fixture(conn, row)
 
-    if sleep_seconds:
-        time.sleep(sleep_seconds)
+    maybe_sleep_between_requests(
+        headers=headers,
+        calls_left=calls_left,
+        sleep_seconds=sleep_seconds,
+        adaptive_throttle=adaptive_throttle,
+        adaptive_throttle_max_seconds=adaptive_throttle_max_seconds,
+    )
 
     return calls_left
 
@@ -888,6 +1004,8 @@ def sync_events(
     fixture_ids: List[int],
     calls_left: int,
     sleep_seconds: float,
+    adaptive_throttle: bool,
+    adaptive_throttle_max_seconds: float,
     force_repoll: bool = False,
 ) -> int:
     rate_limited = False
@@ -935,8 +1053,13 @@ def sync_events(
 
         mark_fixture_polled(conn, fid, code, len(response_events))
 
-        if sleep_seconds:
-            time.sleep(sleep_seconds)
+        maybe_sleep_between_requests(
+            headers=headers,
+            calls_left=calls_left,
+            sleep_seconds=sleep_seconds,
+            adaptive_throttle=adaptive_throttle,
+            adaptive_throttle_max_seconds=adaptive_throttle_max_seconds,
+        )
 
     if rate_limited:
         print("INFO: Resume later with the same command; ingestion is idempotent.")
@@ -966,6 +1089,14 @@ def main():
 
         print(f"Daily budget: total={args.daily_limit}, reserve={args.reserve}, usable={usable_calls}")
         print(f"Sync fixtures for league={args.league_id}, season={season_year}")
+        adaptive_throttle_enabled = not args.disable_adaptive_throttle
+        if adaptive_throttle_enabled:
+            print(
+                "Adaptive throttle: enabled "
+                f"(base_sleep={args.sleep_seconds}, cap={args.adaptive_throttle_max_seconds})"
+            )
+        else:
+            print(f"Adaptive throttle: disabled (fixed sleep={args.sleep_seconds})")
         if args.skip_fixture_refresh:
             print("Skipping fixture refresh (--skip-fixture-refresh enabled).")
         else:
@@ -976,6 +1107,8 @@ def main():
                 season_year,
                 calls_left,
                 args.sleep_seconds,
+                adaptive_throttle_enabled,
+                args.adaptive_throttle_max_seconds,
             )
             conn.commit()
 
@@ -983,7 +1116,15 @@ def main():
         fixture_ids = get_fixtures_needing_events(conn, args.league_id, season_year, max_event_calls)
         print(f"Fixtures missing events (processing now): {len(fixture_ids)}")
 
-        calls_left = sync_events(conn, api_key, fixture_ids, calls_left, args.sleep_seconds)
+        calls_left = sync_events(
+            conn,
+            api_key,
+            fixture_ids,
+            calls_left,
+            args.sleep_seconds,
+            adaptive_throttle_enabled,
+            args.adaptive_throttle_max_seconds,
+        )
         conn.commit()
 
         backfill_calls = min(args.max_full_event_backfill_calls, calls_left)
@@ -1001,6 +1142,8 @@ def main():
                 repoll_ids,
                 calls_left,
                 args.sleep_seconds,
+                adaptive_throttle_enabled,
+                args.adaptive_throttle_max_seconds,
                 force_repoll=True,
             )
             conn.commit()

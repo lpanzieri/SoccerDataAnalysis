@@ -38,6 +38,29 @@ Initial interpretation:
 
 ## Execution Log
 
+### Task 11 - Replace fixed sleep pacing with adaptive throttling
+
+- Branch: `opt/task-11-adaptive-throttle`
+- Status: code complete (benchmark complete; throughput delta pending workload)
+- Files changed: `sync_api_football_events.py`
+- Changes implemented:
+  - Added header-aware throttle computation using API rate-limit headers.
+  - Added fallback pacing when rate-limit headers are unavailable.
+  - Added CLI controls:
+    - `--disable-adaptive-throttle`
+    - `--adaptive-throttle-max-seconds`
+  - Wired adaptive pacing into both `/fixtures` and `/fixtures/events` polling paths.
+- Validation completed:
+  - Python syntax check passed (`sync_api_football_events.py`).
+  - Runtime smoke check passed with adaptive throttle enabled.
+- Benchmark status:
+  - Report file: `benchmarks/sync_benchmark_task11_20260425_173301.json`
+  - Run log: `benchmarks/sync_benchmark_task11_20260425_173301.log`
+  - `duration_seconds`: 2.25
+  - `calls_left_in_run_budget`: 9 (one API call consumed)
+  - `fixtures_missing_events_processing_now`: 0
+  - Outcome: live path executed successfully with adaptive throttling enabled; throughput delta remains pending a workload with pending fixtures/events.
+
 ### Task 10 - Reduce cursor churn and batch write operations in sync flow
 
 - Branch: `opt/task-10-sync-batching`
@@ -270,6 +293,7 @@ Initial interpretation:
 - Target file: `sync_api_football_events.py`
 - Effort: 3-5 hours
 - Risk: Medium
+- Status: Code complete on `opt/task-11-adaptive-throttle` (benchmark complete; throughput delta pending workload)
 
 ### Day 6 - DB Tuning (Only Proven Changes)
 
@@ -322,7 +346,7 @@ Remaining:
 - [ ] Task 3
 - [ ] Task 5
 - [~] Task 10 (code complete, smoke benchmark done, throughput delta pending workload)
-- [ ] Task 11
+- [~] Task 11 (code complete, benchmark done, throughput delta pending workload)
 - [ ] Task 12
 - [ ] Task 13
 - [ ] Task 14
