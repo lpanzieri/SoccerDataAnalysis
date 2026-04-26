@@ -8,6 +8,10 @@ def fetch_and_insert_missing_data_from_api(db: DBConfig, league_code: str, from_
     """
     import os
     import mysql.connector
+<<<<<<< HEAD
+=======
+    from datetime import datetime
+>>>>>>> opt/task-7-cache-hot-path
     from sync_api_football_events import sync_fixtures
 
     api_key = os.getenv("APIFOOTBALL_KEY", "")
@@ -93,10 +97,13 @@ CACHE_TABLE_NAME = "helper_response_cache"
 REFRESH_QUEUE_PATH = HELPERS_ROOT / "refresh_queue.jsonl"
 REFRESH_TRIGGER_COOLDOWN_SECONDS = 300
 LOADER_CACHE_TTL_SECONDS = 30.0
+CACHE_PRUNE_INTERVAL_SECONDS = 300.0
+CACHE_PRUNE_LIMIT = 200
 
 
 _recent_refresh_triggers: Dict[str, float] = {}
 _json_loader_cache: Dict[Path, Dict[str, Any]] = {}
+_cache_runtime_state: Dict[Tuple[str, int, str, str], Dict[str, Any]] = {}
 
 
 DEFAULT_TEMPLATES = [
@@ -485,6 +492,50 @@ def _connect_db(db: DBConfig):
     )
 
 
+def _cache_runtime_key(db: DBConfig) -> Tuple[str, int, str, str]:
+    return (db.host, int(db.port), db.user, db.database)
+
+
+def _cache_prune_interval_seconds() -> float:
+    raw = os.getenv("HELPER_CACHE_PRUNE_INTERVAL_SECONDS")
+    if raw is None:
+        return CACHE_PRUNE_INTERVAL_SECONDS
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return CACHE_PRUNE_INTERVAL_SECONDS
+
+
+def _cache_prune_limit() -> int:
+    raw = os.getenv("HELPER_CACHE_PRUNE_LIMIT")
+    if raw is None:
+        return CACHE_PRUNE_LIMIT
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return CACHE_PRUNE_LIMIT
+
+
+def _prepare_cache_runtime(db: DBConfig) -> None:
+    key = _cache_runtime_key(db)
+    state = _cache_runtime_state.get(key)
+    if state is None:
+        _ensure_response_cache_table(db)
+        state = {
+            "table_ensured": True,
+            "last_prune_at": 0.0,
+        }
+        _cache_runtime_state[key] = state
+
+    now = time.monotonic()
+    prune_interval = _cache_prune_interval_seconds()
+    last_prune_at = float(state.get("last_prune_at", 0.0))
+    should_prune = (prune_interval == 0.0) or ((now - last_prune_at) >= prune_interval)
+    if should_prune:
+        _prune_expired_cache(db, limit=_cache_prune_limit())
+        state["last_prune_at"] = now
+
+
 def _ensure_response_cache_table(db: DBConfig) -> None:
     conn = _connect_db(db)
     cur = conn.cursor()
@@ -817,8 +868,7 @@ def answer_question_with_helpers(
 
 
     if use_cache:
-        _ensure_response_cache_table(db)
-        _prune_expired_cache(db)
+        _prepare_cache_runtime(db)
         cached = _get_cached_rows(db, cache_key)
         if cached is not None:
             cached_rows = cached["rows"]
