@@ -19,5 +19,7 @@ plans/
 reports/
 reports/**/*.html
 .cache/
+nice-to-have.txt
+docs/VPS_Apache_Deployment_Guide.*
 scripts/helpers/refresh_queue.jsonl
 scripts/maintenance/generate_db_includes_html_report.py
