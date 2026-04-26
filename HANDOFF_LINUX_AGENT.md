@@ -1,46 +1,59 @@
 # Optimization Handoff to Linux Agent (2026-04-26)
 
 ## Overview
-Optimization work is **in progress**. Currently **5 of 14 optimization tasks have been merged to main**. Additional 9 tasks remain on feature branches pending review/testing. This document provides status, guidance for pending work, and operational considerations.
+Optimization merge work is complete. All optimization branches `opt/task-2` through `opt/task-14` are now contained in `main`.
+
+Implemented tasks now on `main`:
+- Task 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
+
+Deferred / already covered:
+- Task 1 was skipped because the baseline snapshot was already captured.
+- Task 5.1 was covered by Task 5 smoke validation.
+
+Task 9 note:
+- `opt/task-9-async-refresh-trigger` is an ancestor of `main`.
+- A separate merge commit was not needed because its changes were already present after the helper-path conflict resolutions.
 
 ## Current Status Summary
 
 ### Merge Status
-**Completed & Merged (5 tasks):**
+**All optimization branches merged into main:**
+- ✅ Task 2 - Batched goals query
 - ✅ Task 3 - Schema capability check caching
+- ✅ Task 4 - Single render pipeline
 - ✅ Task 5 - Badge decode optimization
-- ✅ Task 10 - Sync batching (reduce cursor churn)
+- ✅ Task 6 - TTL loader cache
+- ✅ Task 7 - Cache hot-path optimization
+- ✅ Task 8 - Lightweight freshness
+- ✅ Task 9 - Async refresh trigger
+- ✅ Task 10 - Sync batching
 - ✅ Task 11 - Adaptive throttling
+- ✅ Task 12 - DB EXPLAIN indexes
+- ✅ Task 13 - Regression pass
 - ✅ Task 14 - Documentation updates
-
-**Pending Merge (9 tasks):**
-- ⏳ Task 2 - Batched goals query (branch: opt/task-2-batched-goals-query)
-- ⏳ Task 4 - Single render pipeline (branch: opt/task-4-single-render)
-- ⏳ Task 6 - TTL loader cache (branch: opt/task-6-loader-ttl-cache)
-- ⏳ Task 7 - Cache hot-path optimization (branch: opt/task-7-cache-hot-path)
-- ⏳ Task 8 - Lightweight freshness (branch: opt/task-8-light-freshness)
-- ⏳ Task 9 - Async refresh trigger (branch: opt/task-9-async-refresh-trigger)
-- ⏳ Task 12 - DB EXPLAIN indexes (branch: opt/task-12-db-explain-index)
-- ⏳ Task 13 - Regression pass (branch: opt/task-13-regression-pass)
-- ✅ Task 14 - Final documentation (merged)
 
 ### Established Baseline
 - Baseline benchmarks captured for tracking ongoing performance (2026-04-25)
 - Key metrics documented in OPTIMIZATION_EXECUTION_CHECKLIST.md
 
-### Key Performance Gains (Merged Tasks Only)
+### Key Performance Gains
 
-**Sync Flow (Tasks 10, 11 - Merged):**
+**Sync Flow (Tasks 10, 11):**
 - Task 10: Batching reduces cursor churn and consolidates DB writes
 - Task 11: Adaptive throttling improves quota efficiency on rate-limited APIs
 - Throughput gains pending validation during next active backfill run
 
-**Helper Optimization (Tasks 3, 5 - Merged):**
-- Task 3: Schema checks cached in-process (avoids repeated information_schema queries)
-- Task 5: Badge decode optimization with in-memory cache (max 50 entries)
-- Helper latency improvements from these limited; full gains pending Tasks 2, 4, 6, 7, 8, 9
+**Helper Optimization (Tasks 2, 3, 4, 5, 6, 7, 8, 9):**
+- Task 2: Batched goals aggregation removes the N+1 query loop
+- Task 3: Schema checks cached in-process
+- Task 4: Single render pipeline avoids duplicate image generation
+- Task 5: Badge decode optimization with in-memory cache
+- Task 6: Loader TTL cache reduces file-read churn
+- Task 7: Cache ensure/prune removed from request hot path
+- Task 8: Lightweight freshness avoids per-request DB freshness probes
+- Task 9: Stale cache now serves immediately and queues refresh intent
 
-**Expected Gains (When Pending Tasks Merged):**
+**Measured target outcomes from benchmarked branches:**
 - Helper (cache ON): p95 741.79ms → ~83ms (target 89% reduction)
 - Helper (cache OFF): p95 365.54ms → ~200ms (target 45% reduction)
 - DB calls/run: 57 → ~6 (target 90% reduction)
@@ -49,152 +62,53 @@ Optimization work is **in progress**. Currently **5 of 14 optimization tasks hav
 
 | Component | Metric | Baseline | Target | Status |
 |-----------|--------|----------|--------|--------|
-| **Helper (cache ON)** | p95 latency | 741.79 ms | 83.30 ms | ⏳ Pending Tasks 2,4,6,7,8,9 |
-| **Helper (cache ON)** | DB calls/run | 57 | 6 | ⏳ Pending Tasks 2,4,6,7,8,9 |
-| **Helper (cache OFF)** | p95 latency | 365.54 ms | 199.90 ms | ⏳ Pending Tasks 2,4,6,7,8,9 |
-| **Helper (cache OFF)** | DB calls/run | 44 | 9 | ⏳ Pending Tasks 2,4,6,7,8,9 |
-| **Sync (batching)** | Cursor churn | High | Low | ✅ Merged (Task 10) |
-| **Sync (throttle)** | Pacing | Fixed sleep | Adaptive | ✅ Merged (Task 11) |
+| **Helper (cache ON)** | p95 latency | 741.79 ms | 83.30 ms | ✅ Branches merged |
+| **Helper (cache ON)** | DB calls/run | 57 | 6 | ✅ Branches merged |
+| **Helper (cache OFF)** | p95 latency | 365.54 ms | 199.90 ms | ✅ Branches merged |
+| **Helper (cache OFF)** | DB calls/run | 44 | 9 | ✅ Branches merged |
+| **Sync (batching)** | Cursor churn | High | Low | ✅ Merged |
+| **Sync (throttle)** | Pacing | Fixed sleep | Adaptive | ✅ Merged |
 
-## Merged Tasks (5 - Ready for Deployment)
+## Merged Tasks
 
-1. **Task 3** - Cache schema capability checks in-process (MERGED)
-   - File: `scripts/helpers/league_records.py`
-   - Avoids repeated `information_schema` queries
-   - Status: Smoke tested, safe for production
+1. **Helper/query path:** Tasks 2, 3, 4, 5, 6, 7, 8, 9
+   - Files: `scripts/helpers/league_records.py`, `scripts/helpers/dynamic_helper_manager.py`, `WORKFLOW.md`
+   - Status: merged into `main`
 
-2. **Task 5** - Badge decode optimization with in-memory caching (MERGED)
-   - File: `scripts/helpers/league_records.py`
-   - Cache max 50 entries, LRU eviction
-   - Status: Smoke tested, safe for production
-
-3. **Task 10** - Reduce cursor churn and batch write operations (MERGED)
+2. **Sync path:** Tasks 10, 11
    - File: `sync_api_football_events.py`
-   - Batches per-fixture writes to event tables
-   - Removes redundant cursor operations
-   - Status: Smoke tests passed; throughput delta pending workload
+   - Status: merged into `main`
 
-4. **Task 11** - Replace fixed sleep with adaptive throttling (MERGED)
-   - File: `sync_api_football_events.py`
-   - Header-aware throttle computation using API rate-limit headers
-   - Fallback pacing when headers unavailable
-   - CLI controls: `--disable-adaptive-throttle`, `--adaptive-throttle-max-seconds`
-   - Status: Smoke tests passed; throughput delta pending workload
+3. **Database path:** Task 12
+   - File: `schema.sql`
+   - Status: merged into `main`
 
-5. **Task 14** - Documentation and checklist updates (MERGED)
-   - Final optimization checklist updates
-   - Merge commit logs and commit messages
-
-## Pending Tasks (9 - Remaining for Full Suite)
-
-1. **Task 2** - Replace N+1 goals loop with batched query
-   - Branch: `opt/task-2-batched-goals-query`
-   - Target: O(seasons*teams) → O(1) batch query
-   - Status: Benchmarked; awaiting merge review
-
-2. **Task 4** - Single render image pipeline
-   - Branch: `opt/task-4-single-render`
-   - Render once, use for file + base64
-   - Status: Benchmarked; awaiting merge review
-
-3. **Task 6** - TTL memory cache for loader files
-   - Branch: `opt/task-6-loader-ttl-cache`
-   - Cache registry/templates/league aliases in-process
-   - Status: Benchmarked; awaiting merge review
-
-4. **Task 7** - Move cache ensure/prune out of hot path
-   - Branch: `opt/task-7-cache-hot-path`
-   - Decouple table maintenance from request path
-   - Status: Benchmarked; awaiting merge review
-
-5. **Task 8** - Lightweight cache freshness strategy
-   - Branch: `opt/task-8-light-freshness`
-   - Replace per-request DB freshness check with stale-mark
-   - Status: Benchmarked; awaiting merge review
-
-6. **Task 9** - Async refresh trigger for stale cache
-   - Branch: `opt/task-9-async-refresh-trigger`
-   - Decouple API refresh from synchronous request path
-   - Status: Benchmarked; awaiting merge review
-
-7. **Task 12** - DB EXPLAIN analysis and index optimization
-   - Branch: `opt/task-12-db-explain-index`
-   - Add composite indexes where EXPLAIN confirms improvement
-   - Status: Awaiting merge review
-
-8. **Task 13** - End-to-end regression pass
-   - Branch: `opt/task-13-regression-pass`
-   - Validation of graphical + non-graphical intents
-   - Intent matching, image/base64 contract, badges, cache behavior
-   - Status: Awaiting merge review
+4. **Validation/docs:** Tasks 13, 14
+   - Files: `docs/TASK13_REGRESSION_SUMMARY_20260425.md`, `OPTIMIZATION_EXECUTION_CHECKLIST.md`, `HANDOFF_LINUX_AGENT.md`
+   - Status: merged into `main`
 
 ## Branches Status
 
-**Currently Deployed to Main:**
-- ✅ Tasks 3, 5, 10, 11, 14 (merged and pushed to origin/main)
-- Currently in production or safe for immediate deployment
+**All optimization branches are now merged into `main`.**
 
-**Pending on Feature Branches:**
-- ⏳ Tasks 2, 4, 6, 7, 8, 9, 12, 13 (remain on `opt/task-*` branches)
-- All have been benchmarked and code-reviewed in prior context
-- Ready for sequential merge and testing
-
-**Merge Strategy for Remaining Tasks:**
+Useful verification commands:
 ```bash
-# Recommended merge order (sequential):
-# 1. Task 2 (prerequisite for full helper chain)
-git checkout main
-git merge opt/task-2-batched-goals-query -m "Merge opt/task-2: Batched goals query"
-
-# 2. Task 4 (depends on Task 2 baseline)
-git merge opt/task-4-single-render -m "Merge opt/task-4: Single render pipeline"
-
-# 3. Task 6 (loader cache)
-git merge opt/task-6-loader-ttl-cache -m "Merge opt/task-6: TTL cache for loaders"
-
-# 4. Task 7 (hot path optimization)
-git merge opt/task-7-cache-hot-path -m "Merge opt/task-7: Move cache ensure/prune out of hot path"
-
-# 5. Task 8 (freshness strategy)
-git merge opt/task-8-light-freshness -m "Merge opt/task-8: Lightweight cache freshness"
-
-# 6. Task 9 (async refresh)
-git merge opt/task-9-async-refresh-trigger -m "Merge opt/task-9: Async refresh trigger"
-
-# 7. Task 12 (DB tuning)
-git merge opt/task-12-db-explain-index -m "Merge opt/task-12: DB EXPLAIN and indexes"
-
-# 8. Task 13 (regression validation)
-git merge opt/task-13-regression-pass -m "Merge opt/task-13: Final regression pass"
-
-git push origin main
+git branch --merged main --list 'opt/task-*'
+git log --oneline -15
+git status
 ```
 
 Remote branches are preserved for audit trail; safe to prune after validation.
 
 ## Next Steps for Linux Agent
 
-### IMMEDIATE PRIORITY: Merge Remaining 9 Tasks
+### Immediate
 
-**Current State:** 5 of 14 tasks merged; 9 pending merge review
-**Target:** Merge all 14 tasks within this session using sequential merge strategy
+1. **Push the completed merge set to origin/main.**
+2. **Run post-merge sanity checks.**
+3. **Monitor the next active helper/sync workload for real-world validation.**
 
-1. **Review each pending branch** (Tasks 2, 4, 6, 7, 8, 9, 12, 13)
-   - All have passing benchmarks documented
-   - All have baseline comparison in prior context
-   - All follow established code patterns from merged tasks
-
-2. **Merge in recommended order** (see Branches Status section above)
-   - Sequential merging preserves easy rollback capability
-   - Each task can be independently reverted if needed
-   - Follow branching strategy: one feature branch per task
-
-3. **Push to origin after each merge set** (recommended: batch every 2-3 tasks)
-   ```bash
-   git push origin main
-   ```
-
-### Post-Merge Validation (Once All 14 Merged)
+### Post-Merge Validation
 
 1. **Verify clean deployment state:**
    ```bash
@@ -219,7 +133,7 @@ Remote branches are preserved for audit trail; safe to prune after validation.
      "SELECT status, COUNT(*) FROM backfill_task GROUP BY status ORDER BY status;"
    ```
 
-### Monitoring Setup (For Merged Tasks)
+### Monitoring Setup
 
 1. **Current Production Baseline:**
    - Helper p50/p95 latencies from benchmarks (Task 4 baseline)

@@ -389,59 +389,56 @@ Initial interpretation:
 - After each task, run the same benchmark script and compare against baseline.
 - If p95 worsens or output contract breaks, revert that task only.
 
-## Current Merge Status (2026-04-26 — UPDATED)
+## Current Merge Status (2026-04-26 — FINAL)
 
-✅ **Merged to Main (5 tasks):**
+✅ **All optimization branches are now merged into main:**
+- [x] Task 2 (batched goals query) — merged 2026-04-26
 - [x] Task 3 (cache schema checks) — merged 2026-04-26 16:40
+- [x] Task 4 (single render) — merged 2026-04-26
 - [x] Task 5 (badge decode optimization) — merged 2026-04-26 16:42
+- [x] Task 6 (loader TTL cache) — merged 2026-04-26
+- [x] Task 7 (cache hot path) — merged 2026-04-26
+- [x] Task 8 (light freshness) — merged 2026-04-26
+- [x] Task 9 (async refresh trigger) — branch is an ancestor of main; changes are present in main
 - [x] Task 10 (sync batching) — merged 2026-04-26 08:36
 - [x] Task 11 (adaptive throttle) — merged 2026-04-26 08:36
+- [x] Task 12 (DB explain indexes) — merged 2026-04-26
+- [x] Task 13 (regression pass) — merged 2026-04-26
 - [x] Task 14 (final documentation) — merged 2026-04-26 16:45
-
-⏳ **Pending Merge to Main (9 tasks):**
-- [ ] Task 2 (batched goals query) — branch: `opt/task-2-batched-goals-query` (ready to merge)
-- [ ] Task 4 (single render) — branch: `opt/task-4-single-render` (ready to merge)
-- [ ] Task 6 (loader TTL cache) — branch: `opt/task-6-loader-ttl-cache` (ready to merge)
-- [ ] Task 7 (cache hot path) — branch: `opt/task-7-cache-hot-path` (ready to merge)
-- [ ] Task 8 (light freshness) — branch: `opt/task-8-light-freshness` (ready to merge)
-- [ ] Task 9 (async refresh trigger) — branch: `opt/task-9-async-refresh-trigger` (ready to merge)
-- [ ] Task 12 (DB explain indexes) — branch: `opt/task-12-db-explain-index` (ready to merge)
-- [ ] Task 13 (regression pass) — branch: `opt/task-13-regression-pass` (ready to merge)
 
 Not Implemented (Deferred as Lower Priority):
 - ⏸️ Task 1 (baseline measurement) — Skipped; baselines already established in baseline snapshot
 - ⏸️ Task 5.1 (badge decode benchmarking) — Covered by smoke tests in Task 5
 
-## Expected Performance Gains (When All 14 Merged)
+## Performance Gains Summary
 
 ### Helper Path (Cache Enabled):
 - **Baseline:** p95 = 741.79 ms, avg DB calls = 57
-- **Target (Tasks 2, 4, 6, 7, 8, 9):** p95 = 52.37 ms → 83.30 ms (Task 9 stale-mark)
+- **Merged result target:** p95 = 52.37 ms → 83.30 ms (Task 9 stale-mark)
 - **Improvement:** ~90% latency reduction when async refresh enabled
 - **DB calls:** 57 → 6 calls/run (90% reduction)
-- **Status:** Tasks 3, 5 merged; 6 helper tasks pending merge
+- **Status:** helper optimization stack merged into main
 
 ### Helper Path (Cache Disabled):
 - **Baseline:** p95 = 365.54 ms, avg DB calls = 44
-- **Target (Task 4):** p95 = 199.90 ms
+- **Merged result target:** p95 = 199.90 ms
 - **Improvement:** ~45% latency reduction
 - **DB calls:** 44 → 9 calls/run (80% reduction)
-- **Status:** Pending Task 4 merge (benchmarked)
+- **Status:** merged into main
 
-### Sync Path (Current - Tasks 10, 11 Live):
-- Batching reduces cursor churn and write operations (Task 10 — ✅ live)
-- Adaptive throttling improves throughput on rate-limited APIs (Task 11 — ✅ live)
+### Sync Path:
+- Batching reduces cursor churn and write operations (Task 10 — ✅ merged)
+- Adaptive throttling improves throughput on rate-limited APIs (Task 11 — ✅ merged)
 - Throughput gains pending validation during next backfill run
 
-## Handoff Checklist (Linux Agent - Current Priority)
+## Handoff Checklist (Linux Agent)
 
-### PRIMARY ACTION: Merge Remaining 9 Tasks
-- [ ] Review each pending branch (all have passing benchmarks)
-- [ ] Merge in recommended order (Tasks 2, 4, 6, 7, 8, 9, 12, 13)
-- [ ] Push to origin after merges
-- [ ] Target: Complete within this session
+### Immediate
+- [ ] Push merged main to origin
+- [ ] Run sanity check on recent merge commits: `git log --oneline main | head -20`
+- [ ] Verify no tracked uncommitted changes: `git status`
 
-### Pre-Deployment Verification (Once All 14 Merged):
+### Pre-Deployment Verification:
 - [ ] Run sanity check on all 14 merged commits: `git log --oneline main | head -20`
 - [ ] Verify no uncommitted changes: `git status`
 - [ ] Confirm all branches properly deleted: `git branch -d opt/task-{2..14}`
