@@ -18,5 +18,6 @@ OPTIMIZATION_EXECUTION_CHECKLIST.md
 plans/
 reports/
 reports/**/*.html
+.cache/
 scripts/helpers/refresh_queue.jsonl
 scripts/maintenance/generate_db_includes_html_report.py
