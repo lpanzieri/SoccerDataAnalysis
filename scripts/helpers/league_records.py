@@ -465,6 +465,16 @@ def _score_probability_grid(
     "away_goals": int(best_idx[1]),
     "probability": round(float(grid[best_idx]), 6),
   }
+
+  # Betting markets derived from the full grid
+  total_goals = np.arange(max_goals + 1)[:, None] + np.arange(max_goals + 1)[None, :]
+  over25 = float(grid[total_goals > 2].sum())
+  under25 = 1.0 - over25
+  over35 = float(grid[total_goals > 3].sum())
+  under35 = 1.0 - over35
+  gg = float(grid[1:, 1:].sum())   # both teams score ≥1
+  ng = 1.0 - gg
+
   flat = [
     {"home_goals": int(i), "away_goals": int(j), "probability": round(float(grid[i, j]), 6)}
     for i in range(max_goals + 1)
@@ -485,6 +495,14 @@ def _score_probability_grid(
     "most_likely_score": best_score,
     "predicted_outcome": outcome,
     "score_grid": flat[:10],
+    "markets": {
+      "over_25": round(over25, 4),
+      "under_25": round(under25, 4),
+      "over_35": round(over35, 4),
+      "under_35": round(under35, 4),
+      "gg": round(gg, 4),
+      "ng": round(ng, 4),
+    },
   }
 
 
@@ -1368,6 +1386,49 @@ def _apply_xi_strength_boost(
   )
 
 
+def _fetch_team_badge_b64(
+  cur: mysql.connector.cursor.MySQLCursor,
+  provider_team_id: Optional[int],
+  team_name: str,
+  league_id: Optional[int],
+) -> Optional[str]:
+  """Return a base64 data-URI for the team badge, or None if unavailable."""
+  try:
+    if provider_team_id is not None:
+      cur.execute(
+        """
+        SELECT badge_image, content_type
+        FROM team_badge
+        WHERE provider_team_id = %s
+        ORDER BY
+          CASE WHEN league_id = %s THEN 0 ELSE 1 END,
+          season_year DESC
+        LIMIT 1
+        """,
+        (provider_team_id, league_id or 0),
+      )
+    else:
+      cur.execute(
+        """
+        SELECT badge_image, content_type
+        FROM team_badge
+        WHERE LOWER(team_name) LIKE LOWER(%s)
+        ORDER BY season_year DESC
+        LIMIT 1
+        """,
+        (f"%{team_name}%",),
+      )
+    row = cur.fetchone()
+    if not row or not row.get("badge_image"):
+      return None
+    blob = bytes(row["badge_image"])
+    content_type = str(row.get("content_type") or "image/png")
+    b64 = base64.b64encode(blob).decode("ascii")
+    return f"data:{content_type};base64,{b64}"
+  except Exception:
+    return None
+
+
 def predict_match_outcome(
   db: DBConfig,
   home_team_name: str,
@@ -1851,9 +1912,14 @@ def predict_match_outcome(
       home_win_bias=home_win_bias,
     )
 
+    home_badge_b64 = _fetch_team_badge_b64(cur, event_home_team_id, resolved_home_name, event_league_id)
+    away_badge_b64 = _fetch_team_badge_b64(cur, event_away_team_id, resolved_away_name, event_league_id)
+
     return {
       "home_team": resolved_home_name,
       "away_team": resolved_away_name,
+      "home_badge_b64": home_badge_b64,
+      "away_badge_b64": away_badge_b64,
       "league_code": league_code,
       "league_name": event_league_name,
       "historical_league_name": historical_league_name,

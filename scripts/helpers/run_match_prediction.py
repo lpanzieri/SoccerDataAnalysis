@@ -22,6 +22,15 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# Pin matplotlib config/cache to a stable path inside the project so it never
+# depends on the HOME env var (which callers may have overwritten, e.g. by using
+# "HOME" as a loop variable in bash, causing matplotlib to create folders named
+# after football teams in the working directory).
+os.environ.setdefault(
+    "MPLCONFIGDIR",
+    str(ROOT / ".cache" / "matplotlib"),
+)
+
 from scripts.helpers.league_records import DBConfig, predict_match_outcome
 from scripts.helpers.prediction_html_report import default_report_path, write_prediction_html_report
 
