@@ -13,6 +13,52 @@ import mysql.connector
 
 matplotlib.use("Agg")  # For headless environments
 
+# Module-level cache for schema capability checks to avoid repeated information_schema queries
+_SCHEMA_CAPABILITY_CACHE: Dict[str, bool] = {}
+
+
+def _clear_schema_cache() -> None:
+  """Clear the schema capability cache. Useful for testing or schema changes."""
+  global _SCHEMA_CAPABILITY_CACHE
+  _SCHEMA_CAPABILITY_CACHE.clear()
+
+
+def _check_column_exists_cached(
+    cur: mysql.connector.cursor.MySQLCursor,
+    table_name: str,
+    column_name: str,
+) -> bool:
+  """
+  Check if a column exists in a table, using in-process cache to avoid repeated information_schema queries.
+  
+  Args:
+    cur: MySQL cursor (dictionary mode)
+    table_name: Name of the table
+    column_name: Name of the column
+  
+  Returns:
+    True if column exists, False otherwise
+  """
+  cache_key = f"{table_name}.{column_name}"
+  if cache_key in _SCHEMA_CAPABILITY_CACHE:
+    return _SCHEMA_CAPABILITY_CACHE[cache_key]
+  
+  # Query information_schema only once per table.column combination
+  cur.execute(
+    """
+    SELECT COUNT(*) AS cnt
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = %s
+      AND COLUMN_NAME = %s
+    """,
+    (table_name, column_name),
+  )
+  schema_row = cur.fetchone() or {}
+  exists = bool(schema_row.get("cnt", 0))
+  _SCHEMA_CAPABILITY_CACHE[cache_key] = exists
+  return exists
+
 
 def plot_goals_comparison(
   db: DBConfig,
@@ -72,17 +118,8 @@ def plot_goals_comparison(
     seasons = cur.fetchall()
     season_labels = [row["season_label"] for row in seasons]
 
-    cur.execute(
-      """
-      SELECT COUNT(*) AS cnt
-      FROM information_schema.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'team'
-        AND COLUMN_NAME = 'badge_path'
-      """
-    )
-    schema_row = cur.fetchone() or {}
-    has_team_badge_path = bool(schema_row.get("cnt", 0))
+    # Check if team table has badge_path column (cached to avoid repeated information_schema queries)
+    has_team_badge_path = _check_column_exists_cached(cur, "team", "badge_path")
 
     team_ids = {}
     team_badges = {}
