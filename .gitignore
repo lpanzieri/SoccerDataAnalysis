@@ -14,3 +14,4 @@ scripts/maintenance/*.last.log
 WORKFLOW.md
 HANDOFF_LINUX_AGENT.md
 OPTIMIZATION_EXECUTION_CHECKLIST.md
+*.html
