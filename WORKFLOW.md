@@ -123,6 +123,18 @@ This document provides a step-by-step workflow and best practices to efficiently
   - Serve stale cache immediately and enqueue refresh intent to `scripts/helpers/refresh_queue.jsonl`.
   - Include `stale` and `refresh_queued` flags in cache metadata when stale payload is served.
   - Tune duplicate-trigger suppression with `HELPER_REFRESH_TRIGGER_COOLDOWN_SECONDS`.
+- **If template, alias, or registry edits do not appear immediately during development:**
+  - Loader files are cached in process with a TTL.
+  - Set `HELPER_LOADER_CACHE_TTL_SECONDS=0` to disable the loader cache temporarily.
+  - Registry writes refresh their in-memory cache immediately; template and alias edits become visible after TTL expiry or process restart.
+  - Do not run API sync inline in the request path for stale cache entries.
+  - Serve stale cache immediately and enqueue refresh intent to `scripts/helpers/refresh_queue.jsonl`.
+  - Include `stale` and `refresh_queued` flags in cache metadata when stale payload is served.
+  - Tune duplicate-trigger suppression with `HELPER_REFRESH_TRIGGER_COOLDOWN_SECONDS`.
+- **If template, alias, or registry edits do not appear immediately during development:**
+  - Loader files are cached in process with a TTL.
+  - Set `HELPER_LOADER_CACHE_TTL_SECONDS=0` to disable the loader cache temporarily.
+  - Registry writes refresh their in-memory cache immediately; template and alias edits become visible after TTL expiry or process restart.
 - **If badges are null/missing:**
   - Inspect DB schema (`team` vs `team_badge`).
   - Verify league ID namespace mismatch and enable `league_name` fallback.
