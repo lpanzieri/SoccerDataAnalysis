@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import os
 from dataclasses import dataclass
 from io import BytesIO
@@ -16,11 +17,21 @@ matplotlib.use("Agg")  # For headless environments
 # Module-level cache for schema capability checks to avoid repeated information_schema queries
 _SCHEMA_CAPABILITY_CACHE: Dict[str, bool] = {}
 
+# Module-level cache for decoded badge images (with size limit to prevent unbounded memory growth)
+_BADGE_IMAGE_CACHE: Dict[str, Any] = {}
+_BADGE_CACHE_MAX_SIZE = 50  # Limit to prevent excessive memory usage
+
 
 def _clear_schema_cache() -> None:
   """Clear the schema capability cache. Useful for testing or schema changes."""
   global _SCHEMA_CAPABILITY_CACHE
   _SCHEMA_CAPABILITY_CACHE.clear()
+
+
+def _clear_badge_cache() -> None:
+  """Clear the badge image cache. Useful for testing or memory pressure."""
+  global _BADGE_IMAGE_CACHE
+  _BADGE_IMAGE_CACHE.clear()
 
 
 def _check_column_exists_cached(
@@ -58,6 +69,68 @@ def _check_column_exists_cached(
   exists = bool(schema_row.get("cnt", 0))
   _SCHEMA_CAPABILITY_CACHE[cache_key] = exists
   return exists
+
+
+def _decode_badge_image_cached(badge_raw: Optional[Any]) -> Optional[Any]:
+  """
+  Decode a badge image with in-memory caching to avoid repeated decode overhead.
+  
+  Supports both blob-backed (bytes) and path-backed (string) badges. Caches decoded
+  numpy arrays keyed by hash of blob content or file path.
+  
+  Args:
+    badge_raw: Badge data (bytes blob or file path string) or None
+  
+  Returns:
+    Decoded image array (numpy ndarray) or None if decode fails or input is None
+  """
+  if badge_raw is None:
+    return None
+  
+  # Create cache key from badge content/path
+  try:
+    if isinstance(badge_raw, (bytes, bytearray, memoryview)):
+      cache_key = f"blob_{hashlib.md5(bytes(badge_raw)).hexdigest()}"
+    else:
+      cache_key = f"path_{hashlib.md5(str(badge_raw).encode()).hexdigest()}"
+  except Exception:
+    return None  # If we can't hash, skip caching
+  
+  # Return cached result if available
+  if cache_key in _BADGE_IMAGE_CACHE:
+    return _BADGE_IMAGE_CACHE[cache_key]
+  
+  # Decode the badge
+  arr_img = None
+  try:
+    if isinstance(badge_raw, (bytes, bytearray, memoryview)):
+      arr_img = plt.imread(BytesIO(bytes(badge_raw)))
+    else:
+      # For path-backed badges, resolve path first
+      from pathlib import Path as PathlibPath
+      p = PathlibPath(badge_raw) if badge_raw else None
+      candidates = [
+        p,
+        PathlibPath.cwd() / (str(badge_raw) if badge_raw else ""),
+        PathlibPath(__file__).resolve().parents[2] / (str(badge_raw) if badge_raw else ""),
+        PathlibPath(__file__).resolve().parent / (str(badge_raw) if badge_raw else ""),
+      ] if p else []
+      badge_path = None
+      for candidate in candidates:
+        if candidate and candidate.is_file():
+          badge_path = str(candidate)
+          break
+      if badge_path:
+        arr_img = plt.imread(badge_path)
+  except Exception:
+    return None
+  
+  # Cache the decoded image if successful, but only if cache isn't full
+  if arr_img is not None:
+    if len(_BADGE_IMAGE_CACHE) < _BADGE_CACHE_MAX_SIZE:
+      _BADGE_IMAGE_CACHE[cache_key] = arr_img
+  
+  return arr_img
 
 
 def plot_goals_comparison(
@@ -204,15 +277,9 @@ def plot_goals_comparison(
     for text in legend.get_texts():
       name = text.get_text()
       badge_raw = team_badges.get(name)
-      try:
-        if isinstance(badge_raw, (bytes, bytearray, memoryview)):
-          arr_img = plt.imread(BytesIO(bytes(badge_raw)))
-        else:
-          badge_path = _resolve_badge_path(str(badge_raw) if badge_raw is not None else None)
-          if not badge_path:
-            continue
-          arr_img = plt.imread(badge_path)
-      except Exception:
+      # Use cached badge decode to minimize decoding overhead
+      arr_img = _decode_badge_image_cached(badge_raw)
+      if arr_img is None:
         continue
 
       text_box = text.get_window_extent(renderer=renderer)
