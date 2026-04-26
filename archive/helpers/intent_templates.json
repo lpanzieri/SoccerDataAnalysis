@@ -1,4 +1,20 @@
 [
+  {
+    "intent": "match_outcome_prediction",
+    "match_phrases": [
+      "predict ",
+      "prediction for ",
+      "who wins ",
+      "forecast "
+    ],
+    "helper_function": "predict_match_outcome",
+    "requires_league": true,
+    "pass_league_code": true,
+    "kwargs": {},
+    "dynamic_kwargs": [
+      "team_pair_from_question"
+    ]
+  },
     {
       "intent": "graphical_goals_comparison",
       "match_phrases": [
