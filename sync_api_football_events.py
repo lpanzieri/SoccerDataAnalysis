@@ -673,7 +673,8 @@ def mark_fixture_polled(conn, fixture_id: int, http_code: int, events_count: int
             UPDATE event_fixture
             SET events_polled_at = %s,
                 last_events_http_code = %s,
-                last_events_count = %s
+                last_events_count = %s,
+                next_retry_after = NULL
             WHERE provider_fixture_id = %s
             """,
             (dt.datetime.now(dt.UTC).replace(tzinfo=None), http_code, events_count, fixture_id),
@@ -739,14 +740,14 @@ def mark_fixture_failed(conn, fixture_id: int, http_code: int):
         cur.close()
 
 
-def maybe_insert_goal_event(conn, fixture_id: int, event: Dict):
+def _build_goal_event_row(fixture_id: int, event: Dict) -> Optional[Tuple]:
     if (event.get("type") or "").lower() != "goal":
-        return
+        return None
 
     time_obj = event.get("time") or {}
     elapsed = time_obj.get("elapsed")
     if elapsed is None:
-        return
+        return None
 
     # Stable idempotency key for providers that don't expose event ids.
     base = {
@@ -761,53 +762,25 @@ def maybe_insert_goal_event(conn, fixture_id: int, event: Dict):
         "comments": event.get("comments"),
     }
     event_hash = hashlib.sha256(json.dumps(base, sort_keys=True).encode("utf-8")).hexdigest()
-
-    cur = conn.cursor()
-    try:
-        cur.execute(
-            """
-            INSERT INTO event_goal (
-                provider_fixture_id, event_hash, team_id, team_name,
-                player_id, player_name, assist_id, assist_name,
-                elapsed_minute, extra_minute, event_type, event_detail,
-                comments, raw_json
-            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            ON DUPLICATE KEY UPDATE
-                team_id = VALUES(team_id),
-                team_name = VALUES(team_name),
-                player_id = VALUES(player_id),
-                player_name = VALUES(player_name),
-                assist_id = VALUES(assist_id),
-                assist_name = VALUES(assist_name),
-                elapsed_minute = VALUES(elapsed_minute),
-                extra_minute = VALUES(extra_minute),
-                event_type = VALUES(event_type),
-                event_detail = VALUES(event_detail),
-                comments = VALUES(comments),
-                raw_json = VALUES(raw_json)
-            """,
-            (
-                fixture_id,
-                event_hash,
-                (event.get("team") or {}).get("id"),
-                (event.get("team") or {}).get("name"),
-                (event.get("player") or {}).get("id"),
-                (event.get("player") or {}).get("name"),
-                (event.get("assist") or {}).get("id"),
-                (event.get("assist") or {}).get("name"),
-                int(elapsed),
-                (int(time_obj.get("extra")) if time_obj.get("extra") is not None else None),
-                event.get("type"),
-                event.get("detail"),
-                event.get("comments"),
-                json.dumps(event, ensure_ascii=False),
-            ),
-        )
-    finally:
-        cur.close()
+    return (
+        fixture_id,
+        event_hash,
+        (event.get("team") or {}).get("id"),
+        (event.get("team") or {}).get("name"),
+        (event.get("player") or {}).get("id"),
+        (event.get("player") or {}).get("name"),
+        (event.get("assist") or {}).get("id"),
+        (event.get("assist") or {}).get("name"),
+        int(elapsed),
+        (int(time_obj.get("extra")) if time_obj.get("extra") is not None else None),
+        event.get("type"),
+        event.get("detail"),
+        event.get("comments"),
+        json.dumps(event, ensure_ascii=False),
+    )
 
 
-def maybe_insert_timeline_event(conn, fixture_id: int, event: Dict):
+def _build_timeline_event_row(fixture_id: int, event: Dict) -> Tuple:
     time_obj = event.get("time") or {}
     elapsed = time_obj.get("elapsed")
 
@@ -823,9 +796,31 @@ def maybe_insert_timeline_event(conn, fixture_id: int, event: Dict):
         ).encode("utf-8")
     ).hexdigest()
 
+    return (
+        fixture_id,
+        event_hash,
+        (event.get("team") or {}).get("id"),
+        (event.get("team") or {}).get("name"),
+        (event.get("player") or {}).get("id"),
+        (event.get("player") or {}).get("name"),
+        (event.get("assist") or {}).get("id"),
+        (event.get("assist") or {}).get("name"),
+        (int(elapsed) if elapsed is not None else None),
+        (int(time_obj.get("extra")) if time_obj.get("extra") is not None else None),
+        event.get("type"),
+        event.get("detail"),
+        event.get("comments"),
+        json.dumps(event, ensure_ascii=False),
+    )
+
+
+def upsert_timeline_events_batch(conn, rows: List[Tuple]):
+    if not rows:
+        return
+
     cur = conn.cursor()
     try:
-        cur.execute(
+        cur.executemany(
             """
             INSERT INTO event_timeline (
                 provider_fixture_id, event_hash, team_id, team_name,
@@ -847,22 +842,41 @@ def maybe_insert_timeline_event(conn, fixture_id: int, event: Dict):
                 comments = VALUES(comments),
                 raw_json = VALUES(raw_json)
             """,
-            (
-                fixture_id,
-                event_hash,
-                (event.get("team") or {}).get("id"),
-                (event.get("team") or {}).get("name"),
-                (event.get("player") or {}).get("id"),
-                (event.get("player") or {}).get("name"),
-                (event.get("assist") or {}).get("id"),
-                (event.get("assist") or {}).get("name"),
-                (int(elapsed) if elapsed is not None else None),
-                (int(time_obj.get("extra")) if time_obj.get("extra") is not None else None),
-                event.get("type"),
-                event.get("detail"),
-                event.get("comments"),
-                json.dumps(event, ensure_ascii=False),
-            ),
+            rows,
+        )
+    finally:
+        cur.close()
+
+
+def upsert_goal_events_batch(conn, rows: List[Tuple]):
+    if not rows:
+        return
+
+    cur = conn.cursor()
+    try:
+        cur.executemany(
+            """
+            INSERT INTO event_goal (
+                provider_fixture_id, event_hash, team_id, team_name,
+                player_id, player_name, assist_id, assist_name,
+                elapsed_minute, extra_minute, event_type, event_detail,
+                comments, raw_json
+            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ON DUPLICATE KEY UPDATE
+                team_id = VALUES(team_id),
+                team_name = VALUES(team_name),
+                player_id = VALUES(player_id),
+                player_name = VALUES(player_name),
+                assist_id = VALUES(assist_id),
+                assist_name = VALUES(assist_name),
+                elapsed_minute = VALUES(elapsed_minute),
+                extra_minute = VALUES(extra_minute),
+                event_type = VALUES(event_type),
+                event_detail = VALUES(event_detail),
+                comments = VALUES(comments),
+                raw_json = VALUES(raw_json)
+            """,
+            rows,
         )
     finally:
         cur.close()
@@ -907,21 +921,19 @@ def sync_events(
             continue
 
         response_events = payload.get("response", [])
-        for event in payload.get("response", []):
+        timeline_rows: List[Tuple] = []
+        goal_rows: List[Tuple] = []
+        for event in response_events:
             capture_players_from_event(conn, fid, event)
-            maybe_insert_timeline_event(conn, fid, event)
-            maybe_insert_goal_event(conn, fid, event)
+            timeline_rows.append(_build_timeline_event_row(fid, event))
+            goal_row = _build_goal_event_row(fid, event)
+            if goal_row is not None:
+                goal_rows.append(goal_row)
+
+        upsert_timeline_events_batch(conn, timeline_rows)
+        upsert_goal_events_batch(conn, goal_rows)
 
         mark_fixture_polled(conn, fid, code, len(response_events))
-        # Success clears retry cooldown.
-        cur = conn.cursor()
-        try:
-            cur.execute(
-                "UPDATE event_fixture SET next_retry_after = NULL WHERE provider_fixture_id = %s",
-                (fid,),
-            )
-        finally:
-            cur.close()
 
         if sleep_seconds:
             time.sleep(sleep_seconds)
